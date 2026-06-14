@@ -2,6 +2,64 @@
 
 This is a repository for a learning project within the "DevOps CI/CD" course.
 
+## Project structure
+
+```
+my-microservice-project/
+└── docker/
+    ├── django/
+    │   ├── Dockerfile          # Python 3.10 image for the Django app
+    │   ├── requirements.txt    # Django==4.2, psycopg2-binary==2.9.7
+    │   ├── manage.py
+    │   └── my_project/         # Django project package
+    ├── nginx/
+    │   └── nginx.conf          # reverse proxy -> http://django:8000
+    ├── docker-compose.yml      # services: django + db (postgres) + nginx
+    └── .env                    # POSTGRES_* environment variables
+```
+
+## Services
+
+- **django** — the Django web application, running `manage.py runserver` on port
+  8000, built from `docker/django/Dockerfile`.
+- **db** — PostgreSQL 14 for storing data (credentials come from `.env`).
+- **nginx** — reverse proxy listening on port 80 and forwarding requests to the
+  `django` container (`proxy_pass http://django:8000`).
+
+## How to run
+
+All compose commands are run from the `docker/` directory:
+
+```bash
+cd docker
+docker-compose up -d --build
+```
+
+Then open **http://localhost** — you should see the Django welcome page served
+through Nginx (the Django container is also reachable directly at
+http://localhost:8000).
+
+> **First run note:** on a fresh database, PostgreSQL needs a few seconds to
+> initialize. If Django starts before the database is ready you may briefly get a
+> **502** from Nginx. In that case just restart the Django container once:
+>
+> ```bash
+> docker-compose restart django
+> ```
+
+Apply the database migrations (creates the Django tables in PostgreSQL):
+
+```bash
+docker-compose exec django python manage.py migrate
+```
+
+To stop the stack (add `-v` to also remove the database volume):
+
+```bash
+docker-compose down        # stop
+docker-compose down -v     # stop + wipe the database volume
+```
+
 ## Homework: "Docker" 🐳
 
 Welcome to the homework for the "Docker" topic! 🎉

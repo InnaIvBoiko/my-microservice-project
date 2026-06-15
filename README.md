@@ -21,10 +21,22 @@ my-microservice-project/
 ## Services
 
 - **django** — the Django web application, running `manage.py runserver` on port
-  8000, built from `docker/django/Dockerfile`.
+  8000, built from `docker/django/Dockerfile`. On startup it applies database
+  migrations automatically before starting the server.
 - **db** — PostgreSQL 14 for storing data (credentials come from `.env`).
 - **nginx** — reverse proxy listening on port 80 and forwarding requests to the
   `django` container (`proxy_pass http://django:8000`).
+
+### Startup order
+
+The services use healthchecks and `depends_on` conditions so they start in the
+right order and avoid the "502 Bad Gateway" race condition:
+
+`db` (waits until healthy via `pg_isready`) → `django` (waits until healthy via an
+HTTP check on port 8000) → `nginx`.
+
+This means Nginx only starts proxying once Django is actually ready to accept
+connections.
 
 ## How to run
 
@@ -39,19 +51,13 @@ Then open **http://localhost** — you should see the Django welcome page served
 through Nginx (the Django container is also reachable directly at
 http://localhost:8000).
 
-> **First run note:** on a fresh database, PostgreSQL needs a few seconds to
-> initialize. If Django starts before the database is ready you may briefly get a
-> **502** from Nginx. In that case just restart the Django container once:
+> **Migrations** run automatically every time the `django` container starts
+> (`migrate && runserver` in the compose `command`), so no manual `migrate` step
+> is needed. If you ever want to run it by hand:
 >
 > ```bash
-> docker-compose restart django
+> docker-compose exec django python manage.py migrate
 > ```
-
-Apply the database migrations (creates the Django tables in PostgreSQL):
-
-```bash
-docker-compose exec django python manage.py migrate
-```
 
 To stop the stack (add `-v` to also remove the database volume):
 

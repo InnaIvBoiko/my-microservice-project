@@ -20,3 +20,26 @@ resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
+
+# Create the route table for the private subnets
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id # Attach the table to our VPC
+
+  tags = {
+    Name = "${var.vpc_name}-private-rt" # Tag for the private route table
+  }
+}
+
+# Add a route to the internet through the NAT Gateway
+resource "aws_route" "private_nat" {
+  route_table_id         = aws_route_table.private.id # Private route table ID
+  destination_cidr_block = "0.0.0.0/0"                # All IP addresses
+  nat_gateway_id         = aws_nat_gateway.nat.id     # Use the NAT Gateway as the exit
+}
+
+# Associate the route table with the private subnets
+resource "aws_route_table_association" "private" {
+  count          = length(var.private_subnets) # Associate each private subnet
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}

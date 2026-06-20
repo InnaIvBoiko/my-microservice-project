@@ -45,3 +45,27 @@ resource "aws_internet_gateway" "igw" {
     Name = "${var.vpc_name}-igw" # Tag to identify the Internet Gateway
   }
 }
+
+# Elastic IP for the NAT Gateway
+resource "aws_eip" "nat" {
+  domain = "vpc" # The EIP is used inside the VPC
+
+  tags = {
+    Name = "${var.vpc_name}-nat-eip" # Tag for the Elastic IP
+  }
+
+  depends_on = [aws_internet_gateway.igw] # The IGW must exist first
+}
+
+# Create the NAT Gateway for the private subnets.
+# It is placed in the first public subnet and lets private subnets reach the internet.
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id          # The Elastic IP allocated above
+  subnet_id     = aws_subnet.public[0].id # NAT Gateway lives in a public subnet
+
+  tags = {
+    Name = "${var.vpc_name}-nat" # Tag to identify the NAT Gateway
+  }
+
+  depends_on = [aws_internet_gateway.igw]
+}

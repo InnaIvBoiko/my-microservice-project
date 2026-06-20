@@ -90,3 +90,19 @@ terraform destroy   # Tear down all managed resources
 |----------------|--------------------------|----------------|
 | `aws_region`   | AWS region               | `us-west-2`    |
 | `project_name` | Project name / prefix    | `lesson-5`     |
+
+### Proof of deployment
+
+The infrastructure was deployed to AWS (region `us-west-2`) and then destroyed to
+avoid charges. Logs and screenshots are included as proof:
+
+- [terraform-output.md](terraform-output.md) — full `terraform apply` log
+  (`Apply complete! Resources: 27 added`) with the outputs.
+- [terraform-destroy.md](terraform-destroy.md) — full `terraform destroy` log
+  (`Destroy complete! Resources: 27 destroyed`).
+
+| Resource | Screenshot |
+|----------|------------|
+| VPC (10.0.0.0/16, 6 subnets) | [VPC.png](public/images/VPC.png) |
+| ECR repository | [ECR.png](public/images/ECR.png) |
+| S3 state bucket | [S3.png](public/images/S3.png) |

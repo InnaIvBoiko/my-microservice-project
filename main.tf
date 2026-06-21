@@ -36,9 +36,9 @@ locals {
 
 # S3 and DynamoDB module
 module "s3_backend" {
-  source      = "./modules/s3-backend"            # Path to the module
-  bucket_name = "terraform-state-inna-boiko-2026" # S3 bucket name (must be globally unique)
-  table_name  = "terraform-locks"                 # DynamoDB table name
+  source      = "./modules/s3-backend"
+  bucket_name = "terraform-state-inna-boiko-2026"
+  table_name  = "terraform-locks"
 }
 
 # VPC module

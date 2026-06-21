@@ -2,6 +2,9 @@
 resource "aws_s3_bucket" "terraform_state" {
   bucket = var.bucket_name
 
+  # Allows Terraform to delete the bucket even when it contains versioned objects
+  force_destroy = true
+
   tags = {
     Name        = "Terraform State Bucket"
     Environment = "lesson-5"

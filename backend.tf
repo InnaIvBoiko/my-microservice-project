@@ -5,12 +5,13 @@
 # this backend can be used. On a brand-new environment, comment this block out,
 # run "terraform apply" once to create them, then uncomment it and run
 # "terraform init -migrate-state" to move the state into S3.
-terraform {
-  backend "s3" {
-    bucket         = "terraform-state-inna-boiko-2026"
-    key            = "lesson-5/terraform.tfstate"
-    region         = "us-west-2"
-    dynamodb_table = "terraform-locks"
-    encrypt        = true
-  }
-}
+# Commented out for teardown — uncomment and run "terraform init -migrate-state" to re-enable
+# terraform {
+#   backend "s3" {
+#     bucket       = "terraform-state-inna-boiko-2026"
+#     key          = "lesson-5/terraform.tfstate"
+#     region       = "us-west-2"
+#     use_lockfile = true
+#     encrypt      = true
+#   }
+# }

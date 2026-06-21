@@ -30,3 +30,25 @@ output "ecr_repository_url" {
   description = "URL of the ECR repository"
   value       = module.ecr.repository_url
 }
+
+# --- VPC extras ---
+output "internet_gateway_id" {
+  description = "ID of the Internet Gateway"
+  value       = module.vpc.internet_gateway_id
+}
+
+# --- EKS ---
+output "eks_cluster_endpoint" {
+  description = "EKS API endpoint for connecting to the cluster"
+  value       = module.eks.eks_cluster_endpoint
+}
+
+output "eks_cluster_name" {
+  description = "Name of the EKS cluster"
+  value       = module.eks.eks_cluster_name
+}
+
+output "eks_node_role_arn" {
+  description = "IAM role ARN for EKS worker nodes"
+  value       = module.eks.eks_node_role_arn
+}

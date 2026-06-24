@@ -1,0 +1,26 @@
+image:
+  repository: 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr
+  tag: v2
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 8000
+
+ingress:
+  enabled: false
+
+autoscaler:
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+secret:
+  postgresPassword: pass9764gd
+
+config:
+  ALLOWED_HOSTS: "localhost,127.0.0.1,.elb.amazonaws.com"
+  POSTGRES_HOST: postgres-postgresql
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: django_user
+  POSTGRES_DB: django_db

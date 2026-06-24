@@ -10,7 +10,7 @@ terraform {
     bucket         = "terraform-state-inna-boiko-2026"
     key            = "lesson-5/terraform.tfstate"
     region         = "us-west-2"
-    dynamodb_table = "terraform-locks"
+    use_lockfile   = true
     encrypt        = true
   }
 }

@@ -1,23 +1,17 @@
-# My own microservice project
+# My microservice project — Lesson 7
 
-This is a repository for a learning project within the "DevOps CI/CD" course.
+Kubernetes cluster on AWS (EKS) with a Django application deployed via Helm.
+Infrastructure provisioned with Terraform; Docker image stored in ECR.
 
-## Lesson 5 — Terraform: modular AWS infrastructure
-
-The infrastructure is described with Terraform modules and consists of three
-parts: a state backend (S3 + DynamoDB), networking (VPC) and an image
-registry (ECR).
-
-### Project structure
+## Project structure
 
 ```
-lesson-5/
-├── main.tf                  # Wires modules together, provider, common tags
+├── main.tf                  # Wires all modules together
 ├── backend.tf               # Remote state backend (S3 + DynamoDB)
-├── outputs.tf               # Aggregated outputs from all modules
+├── outputs.tf               # Aggregated outputs
 │
 ├── modules/
-│   ├── s3-backend/          # S3 bucket + DynamoDB for state
+│   ├── s3-backend/          # S3 bucket + DynamoDB for Terraform state
 │   │   ├── s3.tf
 │   │   ├── dynamodb.tf
 │   │   ├── variables.tf
@@ -29,118 +23,115 @@ lesson-5/
 │   │   ├── variables.tf
 │   │   └── outputs.tf
 │   │
-│   └── ecr/                 # ECR repository
-│       ├── ecr.tf
+│   ├── ecr/                 # ECR repository for Docker images
+│   │   ├── ecr.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   └── eks/                 # EKS cluster + node group
+│       ├── eks.tf           # Control plane, IAM role
+│       ├── node.tf          # Worker nodes (EC2), IAM policies
 │       ├── variables.tf
 │       └── outputs.tf
 │
-└── README.md
+├── docker/
+│   └── django/              # Django application
+│       ├── Dockerfile
+│       ├── requirements.txt
+│       └── my_project/
+│
+└── charts/
+    └── django-app/
+        ├── Chart.yaml
+        ├── values.yaml      # Image, service, config, autoscaler params
+        └── templates/
+            ├── deployment.yaml   # Django pods with ConfigMap + Secret
+            ├── service.yaml      # LoadBalancer for external access
+            ├── configmap.yaml    # Non-sensitive env vars (DB host, port…)
+            ├── secret.yaml       # Sensitive env vars (DB password)
+            └── hpa.yaml          # Autoscaler: 2–6 pods at >70% CPU
 ```
 
-### Modules
+## Modules
 
-- **s3-backend** — Creates the S3 bucket that stores the Terraform state
-  (versioning enabled, AES-256 server-side encryption, all public access
-  blocked, lifecycle policy to expire old versions after 90 days) and a
-  DynamoDB table used for state locking so concurrent runs cannot corrupt the
-  state. Outputs the bucket name and the DynamoDB table name.
+- **s3-backend** — S3 bucket (versioning, AES-256 encryption, public access blocked, 90-day lifecycle policy) + DynamoDB table for state locking.
 
-- **vpc** — Creates a VPC (`10.0.0.0/16`) with 3 public and 3 private subnets
-  across three availability zones, an Internet Gateway for the public subnets,
-  and a NAT Gateway (with an Elastic IP) for outbound traffic from the private
-  subnets. Route tables wire everything together. Outputs the VPC ID and subnet
-  IDs.
+- **vpc** — VPC (`10.0.0.0/16`) with 3 public and 3 private subnets across three availability zones, Internet Gateway, NAT Gateway with Elastic IP, and route tables.
 
-- **ecr** — Creates an ECR repository with scan-on-push enabled, AES-256
-  encryption at rest, a repository access policy scoped to the current AWS
-  account only (via `aws_caller_identity`), and a lifecycle policy that keeps
-  only the last 10 images. Outputs the repository URL.
+- **ecr** — ECR repository with scan-on-push, AES-256 encryption, access policy scoped to the current AWS account, and a lifecycle rule keeping only the last 10 images.
 
-### Deployment
+- **eks** — EKS control plane with an IAM role and a managed node group of `t3.small` EC2 instances. Worker nodes have policies for EKS, VPC CNI, and ECR read access.
 
-The backend has a chicken-and-egg problem: the S3 bucket must exist before it
-can be used as a backend. The one-time bootstrap procedure resolves this.
+## Helm chart
 
-1. **Bootstrap** — temporarily disable the remote backend and create the
-   infrastructure with a local state:
+| Template | Purpose |
+|---|---|
+| `deployment.yaml` | Django pods with resource limits; env vars from ConfigMap and Secret |
+| `service.yaml` | `LoadBalancer` — exposes the app on port 80 |
+| `configmap.yaml` | Non-sensitive vars: `POSTGRES_HOST`, `PORT`, `USER`, `DB`, `ALLOWED_HOSTS` |
+| `secret.yaml` | Sensitive vars: `POSTGRES_PASSWORD` |
+| `hpa.yaml` | Scales pods from 2 to 6 when CPU exceeds 70% |
 
-   ```bash
-   terraform init -reconfigure -backend=false
-   terraform apply
-   ```
-
-   This creates the S3 bucket, DynamoDB table, VPC and ECR.
-
-2. **Migrate state to S3** — re-enable the backend and move the local state
-   into the newly created bucket:
-
-   ```bash
-   terraform init -migrate-state
-   ```
-
-   From this point on, `terraform plan` / `terraform apply` work normally with
-   no further changes to `backend.tf`.
-
-### State locking — DynamoDB vs native S3 locking
-
-The current setup uses `dynamodb_table = "terraform-locks"` in `backend.tf`,
-which triggers a deprecation warning from the AWS provider v5. There are two
-paths forward:
-
-**Option A — Keep DynamoDB (current approach)**
-The `dynamodb_table` parameter still works and is the approach required by this
-course. A DynamoDB table is created by the `s3-backend` module and referenced
-in the backend config. The deprecation warning is cosmetic and does not affect
-functionality.
-
-**Option B — Switch to native S3 locking (Terraform ≥ 1.10)**
-Replace `dynamodb_table` with `use_lockfile = true` in `backend.tf`:
-
-```hcl
-terraform {
-  backend "s3" {
-    bucket       = "terraform-state-inna-boiko-2026"
-    key          = "lesson-5/terraform.tfstate"
-    region       = "us-west-2"
-    use_lockfile = true   # replaces dynamodb_table
-    encrypt      = true
-  }
-}
-```
-
-With this option the lock file is stored directly in S3 alongside the state
-(as `terraform.tfstate.tflock`), and the DynamoDB table can be removed from
-the module entirely. This eliminates the warning and reduces the number of
-managed resources by one.
-
-### Commands
+## Deployment
 
 ```bash
-terraform init      # Initialize the working directory and download providers
-terraform plan      # Preview the changes
-terraform apply     # Create / update the infrastructure
-terraform destroy   # Tear down all managed resources
+# 1. Create infrastructure
+terraform init
+terraform apply
+
+# 2. Connect kubectl to the cluster
+aws eks update-kubeconfig --region us-west-2 --name lesson-7-eks
+
+# 3. Build and push Django image to ECR (linux/amd64 for EKS nodes)
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 740948698725.dkr.ecr.us-west-2.amazonaws.com
+docker buildx build --platform linux/amd64 \
+  -t 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr:v2 \
+  ./docker/django --push
+
+# 4. Install metrics-server (required for HPA to read CPU metrics)
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# 5. Deploy with Helm
+helm install my-django ./charts/django-app
+
+# 6. Get the external URL
+kubectl get service my-django-django
 ```
 
-### Main variables
+## Teardown
 
-| Variable       | Description              | Default        |
-|----------------|--------------------------|----------------|
-| `aws_region`   | AWS region               | `us-west-2`    |
-| `project_name` | Project name / prefix    | `lesson-5`     |
+```bash
+# 1. Remove Helm release (also deprovisions the AWS LoadBalancer)
+helm uninstall my-django
 
-### Proof of deployment
+# 2. Wait until the LoadBalancer is fully removed
+kubectl get svc my-django-django
+# repeat until: Error from server (NotFound)
 
-The infrastructure was deployed to AWS (region `us-west-2`) and then destroyed to
-avoid charges. Logs and screenshots are included as proof:
+# 3. Delete ECR images (required because force_delete = false)
+aws ecr batch-delete-image \
+  --region us-west-2 \
+  --repository-name lesson-7-ecr \
+  --image-ids imageTag=v2
 
-- [terraform-output.md](terraform-output.md) — full `terraform apply` log
-  (`Apply complete! Resources: 30 added`) with the outputs.
-- [terraform-destroy.md](terraform-destroy.md) — full `terraform destroy` log
-  (`Destroy complete! Resources: 30 destroyed`).
+# 4. Destroy all infrastructure
+terraform destroy
+```
+
+## Main variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `aws_region` | AWS region | `us-west-2` |
+| `project_name` | Resource name prefix | `lesson-7` |
+| `instance_type` | EC2 node type | `t3.small` |
+
+## Proof of deployment
 
 | Resource | Screenshot |
-|----------|------------|
-| VPC (10.0.0.0/16, 6 subnets) | [VPC.png](public/images/VPC.png) |
-| ECR repository | [ECR.png](public/images/ECR.png) |
-| S3 state bucket | [S3.png](public/images/S3.png) |
+|---|---|
+| EKS cluster active | [EKS-lesson-7.png](public/images/EKS-lesson-7.png) |
+| ECR repository with image | [ECR.png](public/images/ECR.png) |
+| Helm install + kubectl output | [terminal-helm.png](public/images/terminal-helm.png) |
+| Pods Running, Service, HPA | [terminal-kubectl.png](public/images/terminal-kubectl.png) |
+| Django app live on ELB URL | [online.png](public/images/online.png) |

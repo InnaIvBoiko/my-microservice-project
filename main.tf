@@ -23,7 +23,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name (used in tags and resource names)"
   type        = string
-  default     = "lesson-5"
+  default     = "lesson-7"
 }
 
 # Common tags applied to all resources
@@ -58,4 +58,17 @@ module "ecr" {
   ecr_name     = "${var.project_name}-ecr"
   scan_on_push = true
   tags         = local.common_tags
+}
+
+# EKS module for the Kubernetes cluster
+module "eks" {
+  source = "./modules/eks"
+
+  cluster_name = "${var.project_name}-eks"
+  subnet_ids   = module.vpc.public_subnets
+
+  instance_type = "t3.small"
+  desired_size  = 2
+  max_size      = 3
+  min_size      = 1
 }

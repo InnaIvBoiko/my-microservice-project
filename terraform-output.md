@@ -1,9 +1,9 @@
-# Terraform apply — output (lesson-5)
+# Terraform apply — output (lesson-7)
 
 **Command:** `terraform apply`
 **Region:** us-west-2 — **Account:** 740948698725
 
-**Result:** `Apply complete! Resources: 30 added, 0 changed, 0 destroyed.`
+**Result:** `Apply complete! Resources: 31 added, 0 changed, 0 destroyed.`
 
 Below is the full execution plan (the resources Terraform created), the apply log,
 and the final outputs.
@@ -16,7 +16,7 @@ and the final outputs.
   - id = (known after apply)
   - policy = jsonencode({ rules = [{ action = { type = "expire" }, description = "Keep only the last 10 images", rulePriority = 1, selection = { countNumber = 10, countType = "imageCountMoreThan", tagStatus = "any" } }] })
   - registry_id = (known after apply)
-  - repository = "lesson-5-ecr"
+  - repository = "lesson-7-ecr"
     }
 
 # module.ecr.aws_ecr_repository.this will be created
@@ -26,10 +26,10 @@ and the final outputs.
   - force_delete = false
   - id = (known after apply)
   - image_tag_mutability = "MUTABLE"
-  - name = "lesson-5-ecr"
+  - name = "lesson-7-ecr"
   - registry_id = (known after apply)
   - repository_url = (known after apply)
-  - tags = { "ManagedBy" = "Terraform", "Name" = "lesson-5-ecr", "Project" = "lesson-5" }
+  - tags = { "ManagedBy" = "Terraform", "Name" = "lesson-7-ecr", "Project" = "lesson-7" }
 
   - encryption_configuration {
     - encryption_type = "AES256"
@@ -47,16 +47,44 @@ and the final outputs.
   - id = (known after apply)
   - policy = jsonencode({ Statement = [{ Action = ["ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage", "ecr:BatchCheckLayerAvailability", "ecr:PutImage", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload"], Effect = "Allow", Principal = { AWS = "arn:aws:iam::740948698725:root" }, Sid = "AllowPushPull" }], Version = "2008-10-17" })
   - registry_id = (known after apply)
-  - repository = "lesson-5-ecr"
+  - repository = "lesson-7-ecr"
     }
+
+# module.eks.aws_eks_cluster.eks will be created
+
+- resource "aws_eks_cluster" "eks" {
+  - name = "lesson-7-eks"
+  - role_arn = (known after apply)
+  - access_config { authentication_mode = "API", bootstrap_cluster_creator_admin_permissions = true }
+  - vpc_config { endpoint_private_access = true, endpoint_public_access = true }
+    }
+
+# module.eks.aws_eks_node_group.general will be created
+
+- resource "aws_eks_node_group" "general" {
+  - cluster_name = "lesson-7-eks"
+  - instance_types = ["t3.micro"]
+  - labels = { "role" = "general" }
+  - node_group_name = "general"
+  - capacity_type = "ON_DEMAND"
+  - scaling_config { desired_size = 2, max_size = 3, min_size = 1 }
+  - update_config { max_unavailable = 1 }
+    }
+
+# module.eks.aws_iam_role.eks / nodes will be created (x2)
+
+# module.eks.aws_iam_role_policy_attachment (x4)
+
+- AmazonEKSClusterPolicy → eks cluster role
+- AmazonEKSWorkerNodePolicy → nodes role
+- AmazonEKS_CNI_Policy → nodes role
+- AmazonEC2ContainerRegistryReadOnly → nodes role
 
 # module.s3_backend.aws_dynamodb_table.terraform_locks will be created
 
 - resource "aws_dynamodb_table" "terraform_locks" {
-  - arn = (known after apply)
   - billing_mode = "PAY_PER_REQUEST"
   - hash_key = "LockID"
-  - id = (known after apply)
   - name = "terraform-locks"
   - tags = { "Environment" = "lesson-5", "Name" = "Terraform Lock Table" }
 
@@ -173,84 +201,27 @@ and the final outputs.
   - tags = { "Name" = "vpc-vpc" }
     }
 
-Plan: 30 to add, 0 to change, 0 to destroy.
+Plan: 31 to add, 0 to change, 0 to destroy.
 
 ─────────────────────────────────────────────────────────────────────────────
 
 ```
-macbookpro@MacBook-Pro-MacBook my-microservice-project % terraform apply -auto-approve
-
-module.ecr.data.aws_caller_identity.current: Reading...
-module.ecr.data.aws_caller_identity.current: Read complete after 0s [id=740948698725]
-module.ecr.aws_ecr_repository.this: Creating...
-module.s3_backend.aws_dynamodb_table.terraform_locks: Creating...
-module.s3_backend.aws_s3_bucket.terraform_state: Creating...
-module.vpc.aws_vpc.main: Creating...
-module.ecr.aws_ecr_repository.this: Creation complete after 1s [id=lesson-5-ecr]
-module.ecr.aws_ecr_repository_policy.this: Creating...
-module.ecr.aws_ecr_lifecycle_policy.this: Creating...
-module.ecr.aws_ecr_lifecycle_policy.this: Creation complete after 0s [id=lesson-5-ecr]
-module.ecr.aws_ecr_repository_policy.this: Creation complete after 0s [id=lesson-5-ecr]
-module.s3_backend.aws_s3_bucket.terraform_state: Creation complete after 3s [id=terraform-state-inna-boiko-2026]
-module.s3_backend.aws_s3_bucket_ownership_controls.terraform_state_ownership: Creating...
-module.s3_backend.aws_s3_bucket_versioning.terraform_state_versioning: Creating...
-module.s3_backend.aws_s3_bucket_public_access_block.terraform_state_public_access: Creating...
-module.s3_backend.aws_s3_bucket_server_side_encryption_configuration.terraform_state_encryption: Creating...
-module.s3_backend.aws_s3_bucket_ownership_controls.terraform_state_ownership: Creation complete after 0s [id=terraform-state-inna-boiko-2026]
-module.s3_backend.aws_s3_bucket_public_access_block.terraform_state_public_access: Creation complete after 0s [id=terraform-state-inna-boiko-2026]
-module.s3_backend.aws_s3_bucket_server_side_encryption_configuration.terraform_state_encryption: Creation complete after 0s [id=terraform-state-inna-boiko-2026]
-module.s3_backend.aws_s3_bucket_versioning.terraform_state_versioning: Creation complete after 2s [id=terraform-state-inna-boiko-2026]
-module.s3_backend.aws_s3_bucket_lifecycle_configuration.terraform_state_lifecycle: Creating...
-module.s3_backend.aws_dynamodb_table.terraform_locks: Creation complete after 10s [id=terraform-locks]
-module.vpc.aws_vpc.main: Creation complete after 6s [id=vpc-0a6aa1888d78815ac]
-module.vpc.aws_internet_gateway.igw: Creating...
-module.vpc.aws_route_table.public: Creating...
-module.vpc.aws_route_table.private: Creating...
-module.vpc.aws_subnet.private[0]: Creating...
-module.vpc.aws_subnet.private[1]: Creating...
-module.vpc.aws_subnet.private[2]: Creating...
-module.vpc.aws_subnet.public[0]: Creating...
-module.vpc.aws_subnet.public[1]: Creating...
-module.vpc.aws_subnet.public[2]: Creating...
-module.vpc.aws_eip.nat: Creating...
-module.vpc.aws_internet_gateway.igw: Creation complete after 1s [id=igw-0979a5ad5f2a2ad06]
-module.vpc.aws_route_table.public: Creation complete after 1s [id=rtb-009ff42d4b327024]
-module.vpc.aws_route_table.private: Creation complete after 1s [id=rtb-08548098640288ddc1]
-module.vpc.aws_route.public_internet: Creating...
-module.vpc.aws_subnet.private[1]: Creation complete after 1s [id=subnet-0c0cf6218c85940ba]
-module.vpc.aws_route.public_internet: Creation complete after 1s [id=r-rtb-009ff42d4b3270c241080289494]
-module.vpc.aws_eip.nat: Creation complete after 2s [id=eipalloc-0b5982dcd14b1148a]
-module.vpc.aws_subnet.private[0]: Creation complete after 2s [id=subnet-052dd6d5d0ca34e4a]
-module.vpc.aws_subnet.private[2]: Creation complete after 5s [id=subnet-0cc9c8b31e3d9729b]
-module.vpc.aws_route_table_association.private[0]: Creation complete after 1s [id=rtbassoc-01dba1d314e6963de]
-module.vpc.aws_route_table_association.private[1]: Creation complete after 1s [id=rtbassoc-0562b91caec183722]
-module.vpc.aws_route_table_association.private[2]: Creation complete after 1s [id=rtbassoc-05862c5bf10b8941a]
-module.vpc.aws_subnet.public[0]: Creation complete after 16s [id=subnet-08df0b204366c91ac]
-module.vpc.aws_subnet.public[1]: Creation complete after 16s [id=subnet-077e24fd3f2bba393]
-module.vpc.aws_subnet.public[2]: Creation complete after 13s [id=subnet-0971f9c832c85f6c8]
-module.vpc.aws_route_table_association.public[0]: Creation complete after 1s [id=rtbassoc-087ef6c2ae8096cf6]
-module.vpc.aws_route_table_association.public[1]: Creation complete after 1s [id=rtbassoc-01cf64e27c2bcd1a6]
-module.vpc.aws_route_table_association.public[2]: Creation complete after 2s [id=rtbassoc-0e1d7c90710c42090]
-module.s3_backend.aws_s3_bucket_lifecycle_configuration.terraform_state_lifecycle: Creation complete after 59s [id=terraform-state-inna-boiko-2026]
-module.vpc.aws_nat_gateway.nat: Creation complete after 1m48s [id=nat-06326ee6ccbfd6826]
-module.vpc.aws_route.private_nat: Creation complete after 1s [id=r-rtb-08548098640288ddc11080289494]
-
-Apply complete! Resources: 30 added, 0 changed, 0 destroyed.
+Apply complete! Resources: 31 added, 0 changed, 0 destroyed.
 
 Outputs:
 
 dynamodb_table_name = "terraform-locks"
-ecr_repository_url = "740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr"
+ecr_repository_url = "740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr"
 private_subnet_ids = [
-  "subnet-052dd6d5d0ca34e4a",
-  "subnet-0c0cf6218c85940ba",
-  "subnet-0cc9c8b31e3d9729b",
+  "subnet-009303d7f8aec1ff2",
+  "subnet-0cacaf79c6fb7508e",
+  "subnet-079bfb2d2ce23e2cf",
 ]
 public_subnet_ids = [
-  "subnet-08df0b204366c91ac",
-  "subnet-077e24fd3f2bba393",
-  "subnet-0971f9c832c85f6c8",
+  "subnet-063b7b7eecbc05d10",
+  "subnet-0acea98452dd811aa",
+  "subnet-06c7c37c258deb085",
 ]
 s3_bucket_name = "terraform-state-inna-boiko-2026"
-vpc_id = "vpc-0a6aa1888d78815ac"
+vpc_id = "vpc-044d50f2997a0741e"
 ```

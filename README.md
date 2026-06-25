@@ -1,6 +1,6 @@
-# My Microservice Project — Lesson 8-9: CI/CD with Jenkins + ArgoCD
+# Lesson 8-9: CI/CD with Jenkins + ArgoCD on AWS EKS
 
-Full CI/CD pipeline on AWS EKS: Jenkins builds and pushes a Docker image to ECR, updates the Helm chart tag in Git, and ArgoCD automatically deploys the new version to Kubernetes.
+Full CI/CD pipeline on AWS EKS: Jenkins builds and pushes a Docker image to ECR using Kaniko, updates the Helm chart tag in Git, and ArgoCD automatically deploys the new version to Kubernetes.
 
 ---
 
@@ -24,67 +24,56 @@ Jenkins (running inside EKS)
     │
     └─► [Stage 2] Update Helm Chart Tag
             Clones repo, checks out lesson-8-9
-            Updates charts/django-app/values.yaml  →  tag: v1.0.N
-            git commit + git push  →  GitHub
+            Updates charts/django-app/values.yaml → tag: v1.0.N
+            git commit + git push  [skip ci]  → GitHub
                 │
                 │  ArgoCD detects change (autoSync)
                 ▼
             Kubernetes (EKS)
                 Rolling update of Django pods
-                ✅  New version is live
+                ✅ New version is live
 ```
 
 ---
 
-## Project Structure
+## Infrastructure
 
-```
-├── Jenkinsfile              # CI/CD pipeline (Build → Push → Update tag)
-├── main.tf                  # Root: providers + all modules
-├── backend.tf               # Remote state (S3 + DynamoDB)
-├── variables.tf             # All input variables
-├── outputs.tf               # Aggregated outputs
-├── terraform.tfvars         # Your secrets (gitignored)
-├── terraform.tfvars.example # Template — copy and fill in
-│
-├── modules/
-│   ├── s3-backend/          # S3 bucket + DynamoDB for Terraform state
-│   ├── vpc/                 # VPC, subnets, IGW, NAT, route tables
-│   ├── ecr/                 # ECR repository for Docker images
-│   ├── eks/                 # EKS cluster + node group + EBS CSI Driver
-│   ├── jenkins/             # Jenkins via Helm (IRSA, JCasC, Kaniko SA)
-│   ├── argo_cd/             # ArgoCD via Helm + Application CRDs
-│   │   └── charts/          # Local Helm chart that creates ArgoCD Applications
-│   └── ingress/             # ALB Ingress Controller + ACM cert + HTTPS
-│
-├── charts/
-│   └── django-app/          # Helm chart for the Django application
-│       ├── Chart.yaml
-│       ├── values.yaml      # image.tag updated automatically by Jenkins
-│       └── templates/
-│           ├── deployment.yaml
-│           ├── service.yaml
-│           ├── configmap.yaml
-│           ├── secret.yaml
-│           └── hpa.yaml
-│
-└── docker/
-    └── django/              # Django application source + Dockerfile
-```
-
----
-
-## Infrastructure Components
-
-| Module | What it creates |
+| Module | Resources |
 |---|---|
-| **s3-backend** | S3 bucket (versioned, encrypted) + DynamoDB table for state locking |
+| **s3-backend** | S3 bucket (versioned, encrypted) + DynamoDB for state locking |
 | **vpc** | VPC `10.0.0.0/16`, 3 public + 3 private subnets, IGW, NAT Gateway |
-| **ecr** | ECR repository with scan-on-push, lifecycle rule (keep last 10 images) |
-| **eks** | EKS control plane + managed node group (`t3.small`) + EBS CSI Driver (IRSA) |
-| **jenkins** | Jenkins `5.8.27` via Helm; Kubernetes namespace + admin Secret + GitHub Secret + IRSA role for Kaniko → ECR; JCasC auto-creates credentials and seed job |
-| **argo_cd** | ArgoCD `7.4.4` via Helm; repo credentials via labeled Kubernetes Secret; ArgoCD Application CRDs via local chart |
-| **ingress** | AWS Load Balancer Controller + ACM wildcard cert + Route53 DNS validation + Kubernetes Ingress for Jenkins and ArgoCD (HTTPS, HTTP→HTTPS redirect) |
+| **ecr** | ECR repository with scan-on-push |
+| **eks** | EKS cluster + managed node group (3× `t3.small`) + EBS CSI Driver (IRSA) |
+| **jenkins** | Jenkins `5.9.29` via Helm; JCasC auto-creates credentials and seed job; IRSA for Kaniko → ECR |
+| **argo_cd** | ArgoCD `7.4.4` via Helm; repo credentials via Kubernetes Secret; Application CRDs via local chart |
+
+---
+
+## Screenshots
+
+### EKS Nodes Ready
+
+![kubectl get nodes](public/images/kubectl-get-nodes.png)
+
+### Jenkins — Dashboard with seed-job
+
+![Jenkins Dashboard](public/images/jenkins.png)
+
+### Jenkins — seed-job creates django-docker-build pipeline
+
+![Jenkins seed-job success](public/images/seed-job.png)
+
+### Jenkins — seed-job build details
+
+![Jenkins seed-job build](public/images/jenkins-2.png)
+
+### ArgoCD — django-app Synced
+
+![ArgoCD Applications](public/images/argo-cd.png)
+
+### ArgoCD — Application Detail Tree
+
+![ArgoCD Detail](public/images/argo-cd-2.png)
 
 ---
 
@@ -94,87 +83,80 @@ Jenkins (running inside EKS)
 
 - AWS CLI configured (`aws configure`)
 - Terraform ≥ 1.5.0
-- A domain hosted in Route53 (for HTTPS — if skipping ingress, set `domain_name = ""` and remove the ingress module from `main.tf`)
-- A GitHub Personal Access Token with **repo** + **workflow** scopes
+- kubectl + Helm installed
+- GitHub Personal Access Token with **repo** + **workflow** scopes
 
 ### Step 1 — Fill in secrets
 
 ```bash
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your real values:
-#   jenkins_admin_password, github_token, domain_name
+#   jenkins_admin_password, github_username, github_token
 ```
 
-### Step 2 — Bootstrap the S3 backend (first time only)
+### Step 2 — Bootstrap S3 backend (first time only)
 
 ```bash
-# Comment out the backend block in backend.tf, then:
-terraform init
+terraform init -reconfigure
 terraform apply -target=module.s3_backend
-# Uncomment backend.tf, then migrate state:
-terraform init -migrate-state   # answer "yes"
+terraform init -migrate-state    # answer "yes" to migrate state to S3
 ```
 
-### Step 3 — Deploy everything
+### Step 3 — Deploy VPC, ECR, EKS
 
 ```bash
-terraform apply
+terraform apply -target=module.vpc -target=module.ecr -target=module.eks
 ```
 
-> **Note:** The first `terraform apply` creates the cluster, Jenkins, ArgoCD, and Ingress objects.
-> The ALB hostnames are only available after the ALB Ingress Controller provisions the load balancers.
-> Run `terraform apply` a second time to create the Route53 ALIAS records.
+> EKS cluster creation takes ~15 minutes.
 
 ### Step 4 — Connect kubectl
 
 ```bash
 aws eks update-kubeconfig --region us-west-2 --name lesson-8-9-eks
+kubectl get nodes    # wait until all 3 nodes show Ready
 ```
 
-### Step 5 — Update Jenkinsfile with your ECR account ID
-
-After `terraform apply`, copy the `ecr_repository_url` output value and replace `ACCOUNT_ID` in `Jenkinsfile`:
+### Step 5 — Deploy Jenkins + ArgoCD
 
 ```bash
-terraform output ecr_repository_url
-# e.g. 123456789012.dkr.ecr.us-west-2.amazonaws.com/lesson-8-9-ecr
+# Set bootstrap_mode = false in terraform.tfvars, then:
+terraform init -migrate-state
+terraform apply
 ```
-
-Edit `Jenkinsfile` line `ECR_REGISTRY = "ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com"`.
 
 ---
 
-## How to Check the Jenkins Pipeline
+## How to Check the Jenkins Job
 
-### Get Jenkins URL
-
-```bash
-terraform output jenkins_url
-# https://jenkins.your-domain.com
-```
-
-Or, without a custom domain:
+### Access Jenkins UI
 
 ```bash
-kubectl get svc -n jenkins jenkins
-# Copy the EXTERNAL-IP from the LoadBalancer service
+kubectl port-forward svc/jenkins -n jenkins 8080:80
 ```
 
-### Login
-
-- **Username:** value of `jenkins_admin_username` (default: `admin`)
+Open **http://localhost:8080**
+- **Username:** `admin`
 - **Password:** value of `jenkins_admin_password` from `terraform.tfvars`
 
-### Run the pipeline
+### Run the seed-job
 
-1. Open Jenkins UI → click **seed-job** → **Build Now**
-   - This creates the `django-docker-build` pipeline job automatically
-2. Click **django-docker-build** → **Build Now**
-3. Watch **Console Output** — you will see:
-   - Kaniko building and pushing the image to ECR
-   - git clone, sed replacing the tag, git push
+1. On the dashboard click **seed-job** → **Build Now**
+2. If it fails with "script not yet approved":
+   - Go to **Manage Jenkins** → **In-process Script Approval** → click **Approve**
+   - Run **seed-job** again
+3. After success the dashboard shows the `django-docker-build` pipeline
 
-### Verify ECR image
+### Run the CI pipeline
+
+1. Click **django-docker-build** → **Build Now**
+2. Open **Console Output** — you will see:
+   - Kaniko building the Docker image from `docker/django/Dockerfile`
+   - Image pushed to ECR with tag `v1.0.{BUILD_NUMBER}` and `latest`
+   - `charts/django-app/values.yaml` updated with the new tag
+   - `git commit` + `git push` with `[skip ci]` to avoid loop
+
+### Verify the image in ECR
 
 ```bash
 aws ecr describe-images \
@@ -188,84 +170,57 @@ aws ecr describe-images \
 
 ## How to See the Result in ArgoCD
 
-### Get ArgoCD URL
+### Get the admin password
 
 ```bash
-terraform output argocd_url
-# https://argocd.your-domain.com
-```
-
-Or, without a custom domain:
-
-```bash
-kubectl get svc -n argocd argo-cd-server
-```
-
-### Login
-
-```bash
-# Get the initial admin password
-terraform output argocd_admin_password_command
-# Run the printed command, e.g.:
 kubectl -n argocd get secret argocd-initial-admin-secret \
-  -o jsonpath='{.data.password}' | base64 -d
+  -o jsonpath='{.data.password}' | base64 -d && echo ""
 ```
 
-**Username:** `admin`
+### Access ArgoCD UI
 
-### What to look for
+```bash
+kubectl port-forward svc/argo-cd-argocd-server -n argocd 8888:80
+```
+
+Open **http://localhost:8888**
+- **Username:** `admin`
+- **Password:** printed by the command above
+
+### What to verify
 
 1. Open **Applications** → select **django-app**
-2. Status should be **Synced** and **Healthy**
-3. After Jenkins pushes a new tag, ArgoCD auto-syncs within ~3 minutes (default polling interval)
-4. The **History** tab shows each sync with the commit that triggered it
+2. **Sync Status** must be **Synced** (green) — ArgoCD pulled the latest Git commit
+3. **Health Status** becomes **Healthy** once the Django pods start successfully
+4. After Jenkins pushes a new image tag, ArgoCD auto-syncs within ~3 minutes
+5. The **History and Rollback** tab shows each sync with the triggering commit
 
-### Verify pods were updated
+### Verify pods are updated
 
 ```bash
 kubectl get pods -n default
-kubectl describe pod -n default -l app.kubernetes.io/name=django-app \
+kubectl describe pod -n default -l app=django \
   | grep Image
 # Should show the new ECR tag: v1.0.N
 ```
 
 ---
 
-## Key Variables
+## Security Notes
 
-| Variable | Description | Default |
-|---|---|---|
-| `aws_region` | AWS region | `us-west-2` |
-| `project_name` | Prefix for all resource names | `lesson-8-9` |
-| `jenkins_admin_username` | Jenkins login username | `admin` |
-| `jenkins_admin_password` | Jenkins login password | *(required)* |
-| `github_username` | GitHub username for Jenkins + ArgoCD | *(required)* |
-| `github_token` | GitHub PAT (repo + workflow scopes) | *(required, sensitive)* |
-| `domain_name` | Route53 domain for HTTPS ingress | *(required for ingress module)* |
+- Jenkins admin password stored in a Kubernetes Secret — never in `values.yaml`
+- GitHub token injected via Kubernetes Secret + `extraEnvVars` — not plain text in Helm values
+- ArgoCD repo credentials stored as a labeled Kubernetes Secret — not in chart values
+- Kaniko authenticates to ECR via IRSA — no AWS credentials stored in the cluster
+- EBS volumes are encrypted (`gp3`, `encrypted: true`)
+- `terraform.tfvars` is gitignored — never commit real secrets
 
 ---
 
 ## Teardown
 
 ```bash
-# 1. Remove Helm releases (deprovisions ALBs and PVCs)
 helm uninstall jenkins -n jenkins
 helm uninstall argo-cd -n argocd
-
-# 2. Destroy all infrastructure
 terraform destroy
-
-# WARNING: terraform destroy also deletes the S3 bucket and DynamoDB table.
-# On the next deploy you will need to bootstrap again (Step 2 above).
 ```
-
----
-
-## Security Notes
-
-- Jenkins admin password is stored in a Kubernetes Secret, never in `values.yaml`
-- GitHub token is injected into Jenkins via a Kubernetes Secret + `extraEnvVars` (not plain text in Helm values)
-- ArgoCD repo credentials are stored as a labeled Kubernetes Secret, not in chart values
-- Kaniko authenticates to ECR via IRSA (IAM Roles for Service Accounts) — no AWS keys in the cluster
-- EBS volumes are encrypted (`gp3`, `encrypted: true`)
-- Plugin versions are pinned (not `:latest`) for reproducibility

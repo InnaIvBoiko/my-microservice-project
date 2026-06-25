@@ -66,55 +66,82 @@ Infrastructure provisioned with Terraform; Docker image stored in ECR.
 
 | Template | Purpose |
 |---|---|
-| `deployment.yaml` | Django pods with resource limits; env vars from ConfigMap and Secret |
-| `service.yaml` | `LoadBalancer` — exposes the app on port 80 |
+| `deployment.yaml` | Django pods with resource limits, env vars from ConfigMap and Secret, liveness and readiness probes (tcpSocket on port 8000) |
+| `service.yaml` | `LoadBalancer` — external port from `values.yaml`, internal port 8000 |
 | `configmap.yaml` | Non-sensitive vars: `POSTGRES_HOST`, `PORT`, `USER`, `DB`, `ALLOWED_HOSTS` |
 | `secret.yaml` | Sensitive vars: `POSTGRES_PASSWORD` |
 | `hpa.yaml` | Scales pods from 2 to 6 when CPU exceeds 70% |
 
+### Health probes
+
+Both probes use `tcpSocket` on the container port so that Kubernetes checks TCP connectivity without making an HTTP request (which would trigger Django's `ALLOWED_HOSTS` validation on the pod IP).
+
+```yaml
+livenessProbe:
+  tcpSocket:
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 3
+readinessProbe:
+  tcpSocket:
+    port: 8000
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  failureThreshold: 3
+```
+
+### Sensitive values
+
+Passwords and the ECR repository URL are **not stored in `values.yaml`**. Pass them at install time:
+
+```bash
+helm install django-app ./charts/django-app \
+  --set image.repository=<ecr-url> \
+  --set secret.postgresPassword=<password>
+```
+
 ## Deployment
 
 ```bash
-# 1. Create infrastructure
+# 1. Bootstrap: create S3 bucket first (backend does not exist yet)
+# Comment out the backend block in backend.tf, then:
 terraform init
+terraform apply -target=module.s3_backend
+# Uncomment backend.tf, then migrate state:
+terraform init -migrate-state   # answer yes
+
+# 2. Create the rest of the infrastructure (VPC, EKS, ECR)
 terraform apply
 
-# 2. Connect kubectl to the cluster
+# 3. Connect kubectl to the cluster
 aws eks update-kubeconfig --region us-west-2 --name lesson-7-eks
 
-# 3. Build and push Django image to ECR (linux/amd64 for EKS nodes)
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 740948698725.dkr.ecr.us-west-2.amazonaws.com
-docker buildx build --platform linux/amd64 \
-  -t 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr:v2 \
-  ./docker/django --push
+# 4. Build and push Django image to ECR (linux/amd64 required for EKS t3 nodes)
+aws ecr get-login-password --region us-west-2 | \
+  docker login --username AWS --password-stdin 740948698725.dkr.ecr.us-west-2.amazonaws.com
+cd docker/django
+docker build --platform linux/amd64 -t django-app:v2 .
+docker tag django-app:v2 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr:v2
+docker push 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr:v2
+cd ../..
 
-# 4. Install metrics-server (required for HPA to read CPU metrics)
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-
-# 5. Deploy with Helm
-helm install my-django ./charts/django-app
+# 5. Deploy with Helm (sensitive values passed via --set)
+helm install django-app ./charts/django-app \
+  --set image.repository=740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr \
+  --set secret.postgresPassword=<your-db-password>
 
 # 6. Get the external URL
-kubectl get service my-django-django
+kubectl get service django-app-django
 ```
 
 ## Teardown
 
 ```bash
-# 1. Remove Helm release (also deprovisions the AWS LoadBalancer)
-helm uninstall my-django
+# 1. Remove Helm releases (also deprovisions the AWS LoadBalancer)
+helm uninstall django-app
 
-# 2. Wait until the LoadBalancer is fully removed
-kubectl get svc my-django-django
-# repeat until: Error from server (NotFound)
-
-# 3. Delete ECR images (required because force_delete = false)
-aws ecr batch-delete-image \
-  --region us-west-2 \
-  --repository-name lesson-7-ecr \
-  --image-ids imageTag=v2
-
-# 4. Destroy all infrastructure
+# 2. Wait until the LoadBalancer is fully removed, then destroy infrastructure
 terraform destroy
 ```
 
@@ -133,5 +160,5 @@ terraform destroy
 | EKS cluster active | [EKS-lesson-7.png](public/images/EKS-lesson-7.png) |
 | ECR repository with image | [ECR.png](public/images/ECR.png) |
 | Helm install + kubectl output | [terminal-helm.png](public/images/terminal-helm.png) |
-| Pods Running, Service, HPA | [terminal-kubectl.png](public/images/terminal-kubectl.png) |
-| Django app live on ELB URL | [online.png](public/images/online.png) |
+| Pods Running (1/1), Service, HPA | [terminal-kubectl.png](public/images/terminal-kubectl.png) |
+| Django admin live on ELB URL | [django-administration.png](public/images/django-administration.png) |

@@ -1,0 +1,13 @@
+server:
+  service:
+    type: ClusterIP
+    port: 80
+
+  # ArgoCD serves plain HTTP internally; TLS is terminated at the ALB.
+  # Remove --insecure only if you add cert-manager + internal TLS instead.
+  extraArgs:
+    - --insecure
+
+configs:
+  params:
+    server.insecure: true

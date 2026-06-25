@@ -1,0 +1,24 @@
+{{- /*
+  Repository credentials are managed by Terraform (kubernetes_secret_v1 in argo_cd.tf)
+  using the "argocd.argoproj.io/secret-type: repository" label.
+  ArgoCD discovers them automatically — no credentials are stored in this chart.
+
+  To add extra repositories via the chart instead, uncomment and fill in:
+
+{{- range .Values.repositories }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: {{ .url }}
+  username: {{ .username }}
+  password: {{ .password }}
+---
+{{- end }}
+*/ -}}

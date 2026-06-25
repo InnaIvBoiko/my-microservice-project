@@ -9,6 +9,21 @@ output "eks_cluster_name" {
 }
 
 output "eks_node_role_arn" {
-  description = "IAM role ARN for EKS Worker Nodes"
+  description = "IAM role ARN for EKS worker nodes"
   value       = aws_iam_role.nodes.arn
+}
+
+output "oidc_provider_arn" {
+  description = "ARN of the OIDC provider used for IRSA"
+  value       = aws_iam_openid_connect_provider.oidc.arn
+}
+
+output "oidc_provider_url" {
+  description = "Issuer URL of the OIDC provider (with https://)"
+  value       = aws_iam_openid_connect_provider.oidc.url
+}
+
+output "cluster_ca_certificate" {
+  description = "Base64-encoded CA certificate for the EKS cluster"
+  value       = aws_eks_cluster.eks.certificate_authority[0].data
 }

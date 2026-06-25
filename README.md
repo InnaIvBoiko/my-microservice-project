@@ -1,164 +1,271 @@
-# My microservice project — Lesson 7
+# My Microservice Project — Lesson 8-9: CI/CD with Jenkins + ArgoCD
 
-Kubernetes cluster on AWS (EKS) with a Django application deployed via Helm.
-Infrastructure provisioned with Terraform; Docker image stored in ECR.
+Full CI/CD pipeline on AWS EKS: Jenkins builds and pushes a Docker image to ECR, updates the Helm chart tag in Git, and ArgoCD automatically deploys the new version to Kubernetes.
 
-## Project structure
+---
+
+## CI/CD Flow
 
 ```
-├── main.tf                  # Wires all modules together
-├── backend.tf               # Remote state backend (S3 + DynamoDB)
+Developer
+    │
+    │  git push (lesson-8-9)
+    ▼
+GitHub (my-microservice-project)
+    │
+    │  webhook / poll SCM
+    ▼
+Jenkins (running inside EKS)
+    │
+    ├─► [Stage 1] Build & Push Docker Image
+    │       Kaniko reads docker/django/Dockerfile
+    │       Pushes image to Amazon ECR
+    │       Tags: v1.0.{BUILD_NUMBER}  +  latest
+    │
+    └─► [Stage 2] Update Helm Chart Tag
+            Clones repo, checks out lesson-8-9
+            Updates charts/django-app/values.yaml  →  tag: v1.0.N
+            git commit + git push  →  GitHub
+                │
+                │  ArgoCD detects change (autoSync)
+                ▼
+            Kubernetes (EKS)
+                Rolling update of Django pods
+                ✅  New version is live
+```
+
+---
+
+## Project Structure
+
+```
+├── Jenkinsfile              # CI/CD pipeline (Build → Push → Update tag)
+├── main.tf                  # Root: providers + all modules
+├── backend.tf               # Remote state (S3 + DynamoDB)
+├── variables.tf             # All input variables
 ├── outputs.tf               # Aggregated outputs
+├── terraform.tfvars         # Your secrets (gitignored)
+├── terraform.tfvars.example # Template — copy and fill in
 │
 ├── modules/
 │   ├── s3-backend/          # S3 bucket + DynamoDB for Terraform state
-│   │   ├── s3.tf
-│   │   ├── dynamodb.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   │
-│   ├── vpc/                 # VPC, subnets, Internet/NAT gateways, routing
-│   │   ├── vpc.tf
-│   │   ├── routes.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   │
+│   ├── vpc/                 # VPC, subnets, IGW, NAT, route tables
 │   ├── ecr/                 # ECR repository for Docker images
-│   │   ├── ecr.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   │
-│   └── eks/                 # EKS cluster + node group
-│       ├── eks.tf           # Control plane, IAM role
-│       ├── node.tf          # Worker nodes (EC2), IAM policies
-│       ├── variables.tf
-│       └── outputs.tf
+│   ├── eks/                 # EKS cluster + node group + EBS CSI Driver
+│   ├── jenkins/             # Jenkins via Helm (IRSA, JCasC, Kaniko SA)
+│   ├── argo_cd/             # ArgoCD via Helm + Application CRDs
+│   │   └── charts/          # Local Helm chart that creates ArgoCD Applications
+│   └── ingress/             # ALB Ingress Controller + ACM cert + HTTPS
 │
-├── docker/
-│   └── django/              # Django application
-│       ├── Dockerfile
-│       ├── requirements.txt
-│       └── my_project/
+├── charts/
+│   └── django-app/          # Helm chart for the Django application
+│       ├── Chart.yaml
+│       ├── values.yaml      # image.tag updated automatically by Jenkins
+│       └── templates/
+│           ├── deployment.yaml
+│           ├── service.yaml
+│           ├── configmap.yaml
+│           ├── secret.yaml
+│           └── hpa.yaml
 │
-└── charts/
-    └── django-app/
-        ├── Chart.yaml
-        ├── values.yaml      # Image, service, config, autoscaler params
-        └── templates/
-            ├── deployment.yaml   # Django pods with ConfigMap + Secret
-            ├── service.yaml      # LoadBalancer for external access
-            ├── configmap.yaml    # Non-sensitive env vars (DB host, port…)
-            ├── secret.yaml       # Sensitive env vars (DB password)
-            └── hpa.yaml          # Autoscaler: 2–6 pods at >70% CPU
+└── docker/
+    └── django/              # Django application source + Dockerfile
 ```
 
-## Modules
+---
 
-- **s3-backend** — S3 bucket (versioning, AES-256 encryption, public access blocked, 90-day lifecycle policy) + DynamoDB table for state locking.
+## Infrastructure Components
 
-- **vpc** — VPC (`10.0.0.0/16`) with 3 public and 3 private subnets across three availability zones, Internet Gateway, NAT Gateway with Elastic IP, and route tables.
-
-- **ecr** — ECR repository with scan-on-push, AES-256 encryption, access policy scoped to the current AWS account, and a lifecycle rule keeping only the last 10 images.
-
-- **eks** — EKS control plane with an IAM role and a managed node group of `t3.small` EC2 instances. Worker nodes have policies for EKS, VPC CNI, and ECR read access.
-
-## Helm chart
-
-| Template | Purpose |
+| Module | What it creates |
 |---|---|
-| `deployment.yaml` | Django pods with resource limits, env vars from ConfigMap and Secret, liveness and readiness probes (tcpSocket on port 8000) |
-| `service.yaml` | `LoadBalancer` — external port from `values.yaml`, internal port 8000 |
-| `configmap.yaml` | Non-sensitive vars: `POSTGRES_HOST`, `PORT`, `USER`, `DB`, `ALLOWED_HOSTS` |
-| `secret.yaml` | Sensitive vars: `POSTGRES_PASSWORD` |
-| `hpa.yaml` | Scales pods from 2 to 6 when CPU exceeds 70% |
+| **s3-backend** | S3 bucket (versioned, encrypted) + DynamoDB table for state locking |
+| **vpc** | VPC `10.0.0.0/16`, 3 public + 3 private subnets, IGW, NAT Gateway |
+| **ecr** | ECR repository with scan-on-push, lifecycle rule (keep last 10 images) |
+| **eks** | EKS control plane + managed node group (`t3.small`) + EBS CSI Driver (IRSA) |
+| **jenkins** | Jenkins `5.8.27` via Helm; Kubernetes namespace + admin Secret + GitHub Secret + IRSA role for Kaniko → ECR; JCasC auto-creates credentials and seed job |
+| **argo_cd** | ArgoCD `7.4.4` via Helm; repo credentials via labeled Kubernetes Secret; ArgoCD Application CRDs via local chart |
+| **ingress** | AWS Load Balancer Controller + ACM wildcard cert + Route53 DNS validation + Kubernetes Ingress for Jenkins and ArgoCD (HTTPS, HTTP→HTTPS redirect) |
 
-### Health probes
+---
 
-Both probes use `tcpSocket` on the container port so that Kubernetes checks TCP connectivity without making an HTTP request (which would trigger Django's `ALLOWED_HOSTS` validation on the pod IP).
+## How to Apply Terraform
 
-```yaml
-livenessProbe:
-  tcpSocket:
-    port: 8000
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  failureThreshold: 3
-readinessProbe:
-  tcpSocket:
-    port: 8000
-  initialDelaySeconds: 15
-  periodSeconds: 5
-  failureThreshold: 3
-```
+### Prerequisites
 
-### Sensitive values
+- AWS CLI configured (`aws configure`)
+- Terraform ≥ 1.5.0
+- A domain hosted in Route53 (for HTTPS — if skipping ingress, set `domain_name = ""` and remove the ingress module from `main.tf`)
+- A GitHub Personal Access Token with **repo** + **workflow** scopes
 
-Passwords and the ECR repository URL are **not stored in `values.yaml`**. Pass them at install time:
+### Step 1 — Fill in secrets
 
 ```bash
-helm install django-app ./charts/django-app \
-  --set image.repository=<ecr-url> \
-  --set secret.postgresPassword=<password>
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your real values:
+#   jenkins_admin_password, github_token, domain_name
 ```
 
-## Deployment
+### Step 2 — Bootstrap the S3 backend (first time only)
 
 ```bash
-# 1. Bootstrap: create S3 bucket first (backend does not exist yet)
 # Comment out the backend block in backend.tf, then:
 terraform init
 terraform apply -target=module.s3_backend
 # Uncomment backend.tf, then migrate state:
-terraform init -migrate-state   # answer yes
-
-# 2. Create the rest of the infrastructure (VPC, EKS, ECR)
-terraform apply
-
-# 3. Connect kubectl to the cluster
-aws eks update-kubeconfig --region us-west-2 --name lesson-7-eks
-
-# 4. Build and push Django image to ECR (linux/amd64 required for EKS t3 nodes)
-aws ecr get-login-password --region us-west-2 | \
-  docker login --username AWS --password-stdin 740948698725.dkr.ecr.us-west-2.amazonaws.com
-cd docker/django
-docker build --platform linux/amd64 -t django-app:v2 .
-docker tag django-app:v2 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr:v2
-docker push 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr:v2
-cd ../..
-
-# 5. Deploy with Helm (sensitive values passed via --set)
-helm install django-app ./charts/django-app \
-  --set image.repository=740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr \
-  --set secret.postgresPassword=<your-db-password>
-
-# 6. Get the external URL
-kubectl get service django-app-django
+terraform init -migrate-state   # answer "yes"
 ```
 
-## Teardown
+### Step 3 — Deploy everything
 
 ```bash
-# 1. Remove Helm releases (also deprovisions the AWS LoadBalancer)
-helm uninstall django-app
-
-# 2. Wait until the LoadBalancer is fully removed, then destroy infrastructure
-terraform destroy
+terraform apply
 ```
 
-## Main variables
+> **Note:** The first `terraform apply` creates the cluster, Jenkins, ArgoCD, and Ingress objects.
+> The ALB hostnames are only available after the ALB Ingress Controller provisions the load balancers.
+> Run `terraform apply` a second time to create the Route53 ALIAS records.
+
+### Step 4 — Connect kubectl
+
+```bash
+aws eks update-kubeconfig --region us-west-2 --name lesson-8-9-eks
+```
+
+### Step 5 — Update Jenkinsfile with your ECR account ID
+
+After `terraform apply`, copy the `ecr_repository_url` output value and replace `ACCOUNT_ID` in `Jenkinsfile`:
+
+```bash
+terraform output ecr_repository_url
+# e.g. 123456789012.dkr.ecr.us-west-2.amazonaws.com/lesson-8-9-ecr
+```
+
+Edit `Jenkinsfile` line `ECR_REGISTRY = "ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com"`.
+
+---
+
+## How to Check the Jenkins Pipeline
+
+### Get Jenkins URL
+
+```bash
+terraform output jenkins_url
+# https://jenkins.your-domain.com
+```
+
+Or, without a custom domain:
+
+```bash
+kubectl get svc -n jenkins jenkins
+# Copy the EXTERNAL-IP from the LoadBalancer service
+```
+
+### Login
+
+- **Username:** value of `jenkins_admin_username` (default: `admin`)
+- **Password:** value of `jenkins_admin_password` from `terraform.tfvars`
+
+### Run the pipeline
+
+1. Open Jenkins UI → click **seed-job** → **Build Now**
+   - This creates the `django-docker-build` pipeline job automatically
+2. Click **django-docker-build** → **Build Now**
+3. Watch **Console Output** — you will see:
+   - Kaniko building and pushing the image to ECR
+   - git clone, sed replacing the tag, git push
+
+### Verify ECR image
+
+```bash
+aws ecr describe-images \
+  --repository-name lesson-8-9-ecr \
+  --region us-west-2 \
+  --query 'imageDetails[*].{Tag:imageTags[0],Pushed:imagePushedAt}' \
+  --output table
+```
+
+---
+
+## How to See the Result in ArgoCD
+
+### Get ArgoCD URL
+
+```bash
+terraform output argocd_url
+# https://argocd.your-domain.com
+```
+
+Or, without a custom domain:
+
+```bash
+kubectl get svc -n argocd argo-cd-server
+```
+
+### Login
+
+```bash
+# Get the initial admin password
+terraform output argocd_admin_password_command
+# Run the printed command, e.g.:
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d
+```
+
+**Username:** `admin`
+
+### What to look for
+
+1. Open **Applications** → select **django-app**
+2. Status should be **Synced** and **Healthy**
+3. After Jenkins pushes a new tag, ArgoCD auto-syncs within ~3 minutes (default polling interval)
+4. The **History** tab shows each sync with the commit that triggered it
+
+### Verify pods were updated
+
+```bash
+kubectl get pods -n default
+kubectl describe pod -n default -l app.kubernetes.io/name=django-app \
+  | grep Image
+# Should show the new ECR tag: v1.0.N
+```
+
+---
+
+## Key Variables
 
 | Variable | Description | Default |
 |---|---|---|
 | `aws_region` | AWS region | `us-west-2` |
-| `project_name` | Resource name prefix | `lesson-7` |
-| `instance_type` | EC2 node type | `t3.small` |
+| `project_name` | Prefix for all resource names | `lesson-8-9` |
+| `jenkins_admin_username` | Jenkins login username | `admin` |
+| `jenkins_admin_password` | Jenkins login password | *(required)* |
+| `github_username` | GitHub username for Jenkins + ArgoCD | *(required)* |
+| `github_token` | GitHub PAT (repo + workflow scopes) | *(required, sensitive)* |
+| `domain_name` | Route53 domain for HTTPS ingress | *(required for ingress module)* |
 
-## Proof of deployment
+---
 
-| Resource | Screenshot |
-|---|---|
-| EKS cluster active | [EKS-lesson-7.png](public/images/EKS-lesson-7.png) |
-| ECR repository with image | [ECR.png](public/images/ECR.png) |
-| Helm install + kubectl output | [terminal-helm.png](public/images/terminal-helm.png) |
-| Pods Running (1/1), Service, HPA | [terminal-kubectl.png](public/images/terminal-kubectl.png) |
-| Django admin live on ELB URL | [django-administration.png](public/images/django-administration.png) |
+## Teardown
+
+```bash
+# 1. Remove Helm releases (deprovisions ALBs and PVCs)
+helm uninstall jenkins -n jenkins
+helm uninstall argo-cd -n argocd
+
+# 2. Destroy all infrastructure
+terraform destroy
+
+# WARNING: terraform destroy also deletes the S3 bucket and DynamoDB table.
+# On the next deploy you will need to bootstrap again (Step 2 above).
+```
+
+---
+
+## Security Notes
+
+- Jenkins admin password is stored in a Kubernetes Secret, never in `values.yaml`
+- GitHub token is injected into Jenkins via a Kubernetes Secret + `extraEnvVars` (not plain text in Helm values)
+- ArgoCD repo credentials are stored as a labeled Kubernetes Secret, not in chart values
+- Kaniko authenticates to ECR via IRSA (IAM Roles for Service Accounts) — no AWS keys in the cluster
+- EBS volumes are encrypted (`gp3`, `encrypted: true`)
+- Plugin versions are pinned (not `:latest`) for reproducibility

@@ -1,0 +1,23 @@
+# Overridden at deploy time by helm_release.argo_apps set{} blocks in argo_cd.tf
+global:
+  repoURL: "https://github.com/InnaIvBoiko/my-microservice-project.git"
+  targetRevision: lesson-8-9
+
+applications:
+  - name: django-app
+    namespace: default
+    project: default
+    source:
+      path: charts/django-app
+      helm:
+        valueFiles:
+          - values.yaml
+    destination:
+      server: https://kubernetes.default.svc
+      namespace: default
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+      syncOptions:
+        - CreateNamespace=true

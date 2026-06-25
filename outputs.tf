@@ -27,6 +27,56 @@ output "private_subnet_ids" {
 
 # --- ECR ---
 output "ecr_repository_url" {
-  description = "URL of the ECR repository"
+  description = "URL of the ECR repository — paste ACCOUNT_ID part into Jenkinsfile"
   value       = module.ecr.repository_url
 }
+
+# --- EKS ---
+output "eks_cluster_name" {
+  description = "Name of the EKS cluster"
+  value       = module.eks.eks_cluster_name
+}
+
+output "oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider"
+  value       = module.eks.oidc_provider_arn
+}
+
+# --- Jenkins ---
+output "jenkins_release" {
+  description = "Name of the Jenkins Helm release"
+  value       = module.jenkins.jenkins_release_name
+}
+
+output "jenkins_namespace" {
+  description = "Kubernetes namespace where Jenkins is deployed"
+  value       = module.jenkins.jenkins_namespace
+}
+
+# --- ArgoCD ---
+output "argocd_server" {
+  description = "In-cluster DNS address of the ArgoCD server"
+  value       = module.argo_cd.argo_cd_server_service
+}
+
+output "argocd_admin_password_command" {
+  description = "Command to retrieve the initial ArgoCD admin password"
+  value       = module.argo_cd.admin_password_command
+}
+
+# --- Ingress / TLS (uncomment when module "ingress" is enabled) ---
+# output "jenkins_url" {
+#   value = module.ingress.jenkins_url
+# }
+# output "argocd_url" {
+#   value = module.ingress.argocd_url
+# }
+# output "acm_certificate_arn" {
+#   value = module.ingress.acm_certificate_arn
+# }
+# output "jenkins_alb_hostname" {
+#   value = module.ingress.jenkins_alb_hostname
+# }
+# output "argocd_alb_hostname" {
+#   value = module.ingress.argocd_alb_hostname
+# }

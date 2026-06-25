@@ -1,11 +1,16 @@
+# Override sensitive values at install time, e.g.:
+#   helm install django-app ./charts/django-app \
+#     --set image.repository=<your-ecr-url> \
+#     --set secret.postgresPassword=<your-password>
 image:
-  repository: 740948698725.dkr.ecr.us-west-2.amazonaws.com/lesson-7-ecr
+  repository: ""
   tag: v2
   pullPolicy: IfNotPresent
 
 service:
   type: LoadBalancer
-  port: 8000
+  port: 80           # external port exposed by the LoadBalancer
+  containerPort: 8000 # internal port Django listens on
 
 ingress:
   enabled: false
@@ -16,11 +21,11 @@ autoscaler:
   targetCPUUtilizationPercentage: 70
 
 secret:
-  postgresPassword: pass9764gd
+  postgresPassword: ""  # provide via --set secret.postgresPassword=<value>
 
 config:
   ALLOWED_HOSTS: "localhost,127.0.0.1,.elb.amazonaws.com"
-  POSTGRES_HOST: postgres-postgresql
+  POSTGRES_HOST: "your-rds-endpoint.amazonaws.com"
   POSTGRES_PORT: "5432"
   POSTGRES_USER: django_user
   POSTGRES_DB: django_db

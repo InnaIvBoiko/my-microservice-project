@@ -17,7 +17,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.service.port }}
+            - containerPort: {{ .Values.service.containerPort }}
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-config
@@ -34,3 +34,17 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.containerPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.service.containerPort }}
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 3

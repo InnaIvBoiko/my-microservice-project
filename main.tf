@@ -65,7 +65,7 @@ module "eks" {
   source = "./modules/eks"
 
   cluster_name = "${var.project_name}-eks"
-  subnet_ids   = module.vpc.public_subnets
+  subnet_ids   = module.vpc.private_subnets
 
   instance_type = "t3.small"
   desired_size  = 2

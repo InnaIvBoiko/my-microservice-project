@@ -51,6 +51,10 @@ Jenkins (running inside EKS)
 
 ## Screenshots
 
+### EKS Cluster Active (AWS Console)
+
+![EKS Cluster](public/images/eks-cluster.png)
+
 ### EKS Nodes Ready
 
 ![kubectl get nodes](public/images/kubectl-get-nodes.png)

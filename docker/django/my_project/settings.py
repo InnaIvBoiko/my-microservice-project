@@ -20,11 +20,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-emcj!^rlwnxvy&s&u1#el$1^+3*9@n2tusn8en#%!j-c4&-u$o'
+# Read from the DJANGO_SECRET_KEY env var; fall back to an insecure dev value
+# so local `manage.py` commands still work without extra setup.
+# In Kubernetes the real key is injected via a Secret.
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-emcj!^rlwnxvy&s&u1#el$1^+3*9@n2tusn8en#%!j-c4&-u$o',
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# In Kubernetes set DEBUG=False via the ConfigMap; defaults to True for local dev.
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 

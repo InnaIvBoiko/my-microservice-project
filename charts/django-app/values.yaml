@@ -1,7 +1,8 @@
 # Override sensitive values at install time, e.g.:
 #   helm install django-app ./charts/django-app \
 #     --set image.repository=<your-ecr-url> \
-#     --set secret.postgresPassword=<your-password>
+#     --set secret.postgresPassword=<your-password> \
+#     --set secret.djangoSecretKey=<your-secret-key>
 image:
   repository: ""
   tag: v2
@@ -21,9 +22,11 @@ autoscaler:
   targetCPUUtilizationPercentage: 70
 
 secret:
-  postgresPassword: ""  # provide via --set secret.postgresPassword=<value>
+  postgresPassword: ""   # provide via --set secret.postgresPassword=<value>
+  djangoSecretKey: ""    # provide via --set secret.djangoSecretKey=<value>
 
 config:
+  DEBUG: "False"
   ALLOWED_HOSTS: "localhost,127.0.0.1,.elb.amazonaws.com"
   POSTGRES_HOST: "your-rds-endpoint.amazonaws.com"
   POSTGRES_PORT: "5432"

@@ -27,6 +27,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-secret
                   key: POSTGRES_PASSWORD
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: DJANGO_SECRET_KEY
           resources:
             requests:
               cpu: 250m
@@ -34,14 +39,20 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+          # Liveness: /health/ returns 200 without hitting the DB —
+          # restarts the pod only when Django itself has crashed.
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/
               port: {{ .Values.service.containerPort }}
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
+          # Readiness: /admin/ does a 302 redirect (< 400, counts as success) and
+          # exercises the DB connection — keeps the pod out of rotation until ready.
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /admin/
               port: {{ .Values.service.containerPort }}
             initialDelaySeconds: 15
             periodSeconds: 5

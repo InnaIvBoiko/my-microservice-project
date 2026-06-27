@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name — used as a prefix in resource names and tags"
   type        = string
-  default     = "lesson-8-9"
+  default     = "lesson-db-module"
 }
 
 variable "jenkins_admin_username" {

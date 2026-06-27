@@ -2,7 +2,7 @@
 # terraform.tfvars is gitignored — never commit real secrets.
 
 aws_region   = "us-west-2"
-project_name = "lesson-8-9"
+project_name = "lesson-db-module"
 
 jenkins_admin_username = "admin"
 jenkins_admin_password = ""   # min 12 chars

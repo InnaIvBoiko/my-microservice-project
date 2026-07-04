@@ -64,6 +64,12 @@ output "argocd_admin_password_command" {
   value       = module.argo_cd.admin_password_command
 }
 
+# --- RDS ---
+output "rds_endpoint" {
+  description = "Database connection endpoint — paste into charts/django-app/values.yaml POSTGRES_HOST"
+  value       = module.rds.db_endpoint
+}
+
 # --- Monitoring ---
 output "grafana_port_forward_command" {
   description = "Command to reach the Grafana UI locally (default user: admin)"

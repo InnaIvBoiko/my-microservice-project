@@ -4,7 +4,7 @@
 #     --set secret.postgresPassword=<your-password> \
 #     --set secret.djangoSecretKey=<your-secret-key>
 image:
-  repository: ""
+  repository: "740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr"
   tag: v2
   pullPolicy: IfNotPresent
 
@@ -22,13 +22,13 @@ autoscaler:
   targetCPUUtilizationPercentage: 70
 
 secret:
-  postgresPassword: ""   # provide via --set secret.postgresPassword=<value>
-  djangoSecretKey: ""    # provide via --set secret.djangoSecretKey=<value>
+  postgresPassword: "admin123AWS23"   # must match modules/rds password in main.tf
+  djangoSecretKey: "CHANGE-ME-django-insecure-key"  # any random string works for the demo
 
 config:
   DEBUG: "False"
   ALLOWED_HOSTS: "localhost,127.0.0.1,.elb.amazonaws.com"
-  POSTGRES_HOST: "your-rds-endpoint.amazonaws.com"
+  POSTGRES_HOST: "REPLACE-WITH-terraform-output-rds_endpoint"
   POSTGRES_PORT: "5432"
-  POSTGRES_USER: django_user
-  POSTGRES_DB: django_db
+  POSTGRES_USER: postgres
+  POSTGRES_DB: myapp

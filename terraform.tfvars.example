@@ -2,15 +2,18 @@
 # terraform.tfvars is gitignored — never commit real secrets.
 
 aws_region   = "us-west-2"
-project_name = "lesson-8-9"
+project_name = "final-project"
 
 # Jenkins
 jenkins_admin_username = "admin"
-jenkins_admin_password = ""   # min 12 chars, e.g. "MyJenkins@2025!"
+jenkins_admin_password = ""   # min 12 chars, e.g. "MyJenkins@2026!"
 
 # GitHub — used by Jenkins (CI credentials) and ArgoCD (repo access)
 github_username = "InnaIvBoiko"
 github_token    = ""          # GitHub PAT with scopes: repo, workflow
+
+# Monitoring
+grafana_admin_password = ""   # min 12 chars, e.g. "MyGrafana@2026!"
 
 # Domain — must be a Route53-hosted zone in your AWS account
 # ArgoCD will be at argocd.<domain_name>, Jenkins at jenkins.<domain_name>

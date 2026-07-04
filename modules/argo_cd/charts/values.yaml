@@ -1,7 +1,7 @@
 # Overridden at deploy time by helm_release.argo_apps set{} blocks in argo_cd.tf
 global:
   repoURL: "https://github.com/InnaIvBoiko/my-microservice-project.git"
-  targetRevision: lesson-db-module
+  targetRevision: final-project
 
 applications:
   - name: django-app

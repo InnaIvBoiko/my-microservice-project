@@ -121,7 +121,7 @@ module "argo_cd" {
   namespace       = "argocd"
   chart_version   = "7.4.4"
   repo_url        = "https://github.com/InnaIvBoiko/my-microservice-project.git"
-  target_revision = "lesson-db-module"
+  target_revision = "final-project"
   github_username = var.github_username
   github_token    = var.github_token
 
@@ -134,9 +134,9 @@ module "argo_cd" {
 module "rds" {
   source = "./modules/rds"
 
-  name                       = "myapp-db"
-  use_aurora                 = false
-  aurora_instance_count      = 2
+  name                  = "myapp-db"
+  use_aurora            = false
+  aurora_instance_count = 2
 
   # --- RDS-only ---
   engine                     = "postgres"
@@ -144,22 +144,22 @@ module "rds" {
   parameter_group_family_rds = "postgres16"
 
   # Common
-  instance_class          = "db.t3.micro"    # free-tier eligible
-  allocated_storage       = 20
-  db_name                 = "myapp"
-  username                = "postgres"
-  password                = "admin123AWS23"
-  subnet_private_ids      = module.vpc.private_subnets
-  subnet_public_ids       = module.vpc.public_subnets
-  publicly_accessible     = true
-  vpc_id                  = module.vpc.vpc_id
+  instance_class      = "db.t3.micro" # free-tier eligible
+  allocated_storage   = 20
+  db_name             = "myapp"
+  username            = "postgres"
+  password            = "admin123AWS23"
+  subnet_private_ids  = module.vpc.private_subnets
+  subnet_public_ids   = module.vpc.public_subnets
+  publicly_accessible = true
+  vpc_id              = module.vpc.vpc_id
   # Restrict DB port access to the VPC CIDR only — do not expose to 0.0.0.0/0.
   ingress_cidr_blocks     = ["10.0.0.0/16"]
-  multi_az                = false            # free-tier: single-AZ only
-  backup_retention_period = 0                # free-tier: automated backups must be disabled
+  multi_az                = false # free-tier: single-AZ only
+  backup_retention_period = 0     # free-tier: automated backups must be disabled
   parameters = {
     max_connections = "200"   # max simultaneous client connections
-    log_statement   = "ddl"  # log DDL statements (CREATE, ALTER, DROP)
+    log_statement   = "ddl"   # log DDL statements (CREATE, ALTER, DROP)
     work_mem        = "65536" # per-sort/hash memory in kB (64 MB)
   }
 
@@ -167,7 +167,22 @@ module "rds" {
     Environment = "dev"
     Project     = "myapp"
   }
-} 
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  namespace              = "monitoring"
+  grafana_admin_password = var.grafana_admin_password
+
+  providers = {
+    helm       = helm
+    kubernetes = kubernetes
+  }
+
+  # Reuses the ebs-sc StorageClass created by the jenkins module
+  depends_on = [module.jenkins]
+}
 
 # Ingress module (ALB + ACM + HTTPS) — requires a Route53 domain.
 # Uncomment when you have a domain configured in Route53.

@@ -31,11 +31,11 @@ spec:
     // Replace ACCOUNT_ID with your AWS account number.
     // The repo name matches the ECR module: project_name + "-ecr".
     ECR_REGISTRY = "740948698725.dkr.ecr.us-west-2.amazonaws.com"
-    IMAGE_NAME   = "lesson-8-9-ecr"
+    IMAGE_NAME   = "final-project-ecr"
     IMAGE_TAG    = "v1.0.${BUILD_NUMBER}"
 
     GIT_REPO_URL = "https://github.com/InnaIvBoiko/my-microservice-project.git"
-    GIT_BRANCH   = "lesson-8-9"
+    GIT_BRANCH   = "final-project"
 
     COMMIT_NAME  = "jenkins"
     COMMIT_EMAIL = "jenkins@localhost"

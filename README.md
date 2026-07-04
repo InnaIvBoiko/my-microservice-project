@@ -1,8 +1,8 @@
-# Lesson DB Module: Flexible Terraform RDS Module (Aurora + PostgreSQL)
+# Final Project: DevOps Infrastructure on AWS (EKS + CI/CD + RDS/Aurora)
 
-Universal Terraform module that provisions either a standard **AWS RDS instance** (PostgreSQL / MySQL) or an **Aurora cluster** from a single set of variables, controlled by the `use_aurora` flag.
+Full DevOps infrastructure on AWS provisioned with Terraform: VPC, EKS, ECR, Jenkins + ArgoCD (CI/CD), RDS/Aurora, and monitoring (Prometheus + Grafana).
 
-Built on top of the CI/CD infrastructure from Lesson 8-9 (Jenkins + ArgoCD on EKS).
+This module provisions either a standard **AWS RDS instance** (PostgreSQL / MySQL) or an **Aurora cluster** from a single set of variables, controlled by the `use_aurora` flag.
 
 ---
 
@@ -264,6 +264,7 @@ The first instance is always the writer; all subsequent ones become readers.
 | **jenkins** | Jenkins via Helm; JCasC auto-creates credentials and seed job; IRSA for Kaniko → ECR |
 | **argo_cd** | ArgoCD via Helm; repo credentials via Kubernetes Secret; Application CRDs via local chart |
 | **rds** | Flexible module — standard RDS or Aurora, with subnet group, security group, parameter group |
+| **monitoring** | kube-prometheus-stack via Helm (Prometheus + Grafana + Alertmanager); metrics-server EKS add-on backs the Django HPA |
 
 ---
 
@@ -304,7 +305,7 @@ terraform apply -target=module.vpc -target=module.rds -auto-approve
 
 ```bash
 terraform apply -target=module.vpc -target=module.ecr -target=module.eks
-aws eks update-kubeconfig --region us-west-2 --name lesson-db-module-eks
+aws eks update-kubeconfig --region us-west-2 --name final-project-eks
 kubectl get nodes
 
 # Set bootstrap_mode = false in terraform.tfvars, then:
@@ -314,12 +315,12 @@ terraform apply
 
 ---
 
-## CI/CD Flow (from Lesson 8-9)
+## CI/CD Flow
 
 ```
 Developer
     │
-    │  git push (lesson-db-module)
+    │  git push (final-project)
     ▼
 GitHub (my-microservice-project)
     │
@@ -344,6 +345,22 @@ Jenkins (running inside EKS)
 
 ---
 
+## Monitoring & Autoscaling
+
+Prometheus, Grafana and Alertmanager are deployed via the `kube-prometheus-stack` Helm chart (module `monitoring`). Node/pod metrics come from `node-exporter` and `kube-state-metrics`, both bundled with the chart. The `metrics-server` EKS add-on (module `eks`) exposes the Metrics API that the Django `HorizontalPodAutoscaler` (`charts/django-app/templates/hpa.yaml`) reads CPU utilization from to scale pods automatically.
+
+```bash
+# Grafana (default user: admin, password from terraform.tfvars)
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
+
+# Prometheus
+kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring
+```
+
+Open http://localhost:3000, sign in, and check the built-in "Kubernetes / Compute Resources" dashboards for cluster and pod metrics.
+
+---
+
 ## Security Notes
 
 - RDS security group restricts access to VPC CIDR only (`10.0.0.0/16`)
@@ -361,7 +378,7 @@ Jenkins (running inside EKS)
 ## Teardown
 
 ```bash
-# Destroy only RDS (keep VPC for next lessons):
+# Destroy only RDS (keep VPC for further work):
 terraform destroy -target=module.rds -auto-approve
 
 # Destroy everything:

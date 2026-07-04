@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name — used as a prefix in resource names and tags"
   type        = string
-  default     = "lesson-db-module"
+  default     = "final-project"
 }
 
 variable "jenkins_admin_username" {
@@ -38,6 +38,12 @@ variable "bootstrap_mode" {
   description = "Set true during initial bootstrap (before EKS exists) so providers use placeholder values. Set false after cluster is created."
   type        = bool
   default     = true
+}
+
+variable "grafana_admin_password" {
+  description = "Grafana admin password (min 12 chars recommended)"
+  type        = string
+  sensitive   = true
 }
 
 variable "domain_name" {

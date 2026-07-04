@@ -64,6 +64,17 @@ output "argocd_admin_password_command" {
   value       = module.argo_cd.admin_password_command
 }
 
+# --- Monitoring ---
+output "grafana_port_forward_command" {
+  description = "Command to reach the Grafana UI locally (default user: admin)"
+  value       = module.monitoring.grafana_port_forward_command
+}
+
+output "prometheus_port_forward_command" {
+  description = "Command to reach the Prometheus UI locally"
+  value       = module.monitoring.prometheus_port_forward_command
+}
+
 # --- Ingress / TLS (uncomment when module "ingress" is enabled) ---
 # output "jenkins_url" {
 #   value = module.ingress.jenkins_url

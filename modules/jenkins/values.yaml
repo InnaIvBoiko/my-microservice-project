@@ -84,7 +84,7 @@ controller:
                       url('https://github.com/InnaIvBoiko/my-microservice-project.git')
                       credentials('github-token')
                     }
-                    branches('*/lesson-db-module')
+                    branches('*/final-project')
                   }
                 }
                 steps {
@@ -99,7 +99,7 @@ controller:
                                   url("https://github.com/InnaIvBoiko/my-microservice-project.git")
                                   credentials("github-token")
                                 }
-                                branches("*/lesson-db-module")
+                                branches("*/final-project")
                               }
                             }
                           }

@@ -28,7 +28,7 @@ secret:
 config:
   DEBUG: "False"
   ALLOWED_HOSTS: "localhost,127.0.0.1,.elb.amazonaws.com"
-  POSTGRES_HOST: "REPLACE-WITH-terraform-output-rds_endpoint"
+  POSTGRES_HOST: "myapp-db.cro6wuesev0n.us-west-2.rds.amazonaws.com"
   POSTGRES_PORT: "5432"
   POSTGRES_USER: postgres
   POSTGRES_DB: myapp

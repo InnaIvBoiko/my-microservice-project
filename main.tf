@@ -92,8 +92,8 @@ module "eks" {
   cluster_name  = "${var.project_name}-eks"
   subnet_ids    = module.vpc.private_subnets
   instance_type = "t3.small" # account currently blocks non-Free-Tier launches; t3.small is the last confirmed-working size
-  desired_size  = 3
-  max_size      = 4
+  desired_size  = 5          # scaling_config.desired_size is ignore_changes'd in modules/eks/node.tf — scale it via `aws eks update-nodegroup-config` too
+  max_size      = 6
   min_size      = 1
 }
 

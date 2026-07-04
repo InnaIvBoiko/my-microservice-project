@@ -11,3 +11,5 @@ github_username = "" # e.g. InnaIvBoiko
 github_token    = "" # GitHub PAT with repo + workflow scopes
 
 grafana_admin_password = "" # min 12 chars
+
+db_password = "" # RDS master password

@@ -15,6 +15,9 @@ github_token    = ""          # GitHub PAT with scopes: repo, workflow
 # Monitoring
 grafana_admin_password = ""   # min 12 chars, e.g. "MyGrafana@2026!"
 
+# RDS
+db_password = ""              # RDS master password, min 8 chars
+
 # Domain — must be a Route53-hosted zone in your AWS account
 # ArgoCD will be at argocd.<domain_name>, Jenkins at jenkins.<domain_name>
 domain_name = ""              # e.g. "myproject.example.com"

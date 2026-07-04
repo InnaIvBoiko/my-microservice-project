@@ -46,6 +46,12 @@ variable "grafana_admin_password" {
   sensitive   = true
 }
 
+variable "db_password" {
+  description = "Master password for the RDS database (sensitive)"
+  type        = string
+  sensitive   = true
+}
+
 variable "domain_name" {
   description = "Root domain managed in Route53 (e.g. example.com). Used to issue an ACM wildcard cert and create DNS records for Jenkins and ArgoCD. Leave empty when the ingress module is disabled."
   type        = string

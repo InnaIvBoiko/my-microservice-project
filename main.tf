@@ -91,7 +91,7 @@ module "eks" {
 
   cluster_name  = "${var.project_name}-eks"
   subnet_ids    = module.vpc.private_subnets
-  instance_type = "t3.small"
+  instance_type = "t3.medium" # same 2 vCPU as t3.small, but 4GiB RAM and a higher pod-per-node limit (17 vs 11)
   desired_size  = 3
   max_size      = 4
   min_size      = 1

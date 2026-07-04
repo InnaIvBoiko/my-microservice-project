@@ -1,0 +1,275 @@
+Started by user Jenkins Admin
+Checking out git https://github.com/InnaIvBoiko/my-microservice-project.git into /var/jenkins_home/workspace/django-docker-build@script/b09ec322c96684bc19ed54c1119a559a02f5fc3b50fd649ec68fa43e5a90ddbc to read Jenkinsfile
+The recommended git tool is: NONE
+using credential github-token
+ > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/django-docker-build@script/b09ec322c96684bc19ed54c1119a559a02f5fc3b50fd649ec68fa43e5a90ddbc/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/InnaIvBoiko/my-microservice-project.git # timeout=10
+Fetching upstream changes from https://github.com/InnaIvBoiko/my-microservice-project.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+using GIT_ASKPASS to set credentials GitHub Personal Access Token
+ > git fetch --tags --force --progress -- https://github.com/InnaIvBoiko/my-microservice-project.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/final-project^{commit} # timeout=10
+Checking out Revision ca56001339111af7f557cfa15f060dcbc84ea0e3 (refs/remotes/origin/final-project)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f ca56001339111af7f557cfa15f060dcbc84ea0e3 # timeout=10
+Commit message: "Update EKS instance configuration: increase desired size to 5 and max size to 6"
+ > git rev-list --no-walk ca56001339111af7f557cfa15f060dcbc84ea0e3 # timeout=10
+[Pipeline] Start of Pipeline
+[Pipeline] podTemplate
+[Pipeline] {
+[Pipeline] node
+Created Pod: kubernetes jenkins/django-docker-build-4-ttds8-svchk-hjs3g
+[PodInfo] jenkins/django-docker-build-4-ttds8-svchk-hjs3g
+	Container [git] waiting [ContainerCreating] No message
+	Container [jnlp] waiting [ContainerCreating] No message
+	Container [kaniko] waiting [ContainerCreating] No message
+	Pod [Pending][ContainersNotReady] containers with unready status: [kaniko git jnlp]
+[PodInfo] jenkins/django-docker-build-4-ttds8-svchk-hjs3g
+	Container [git] waiting [ContainerCreating] No message
+	Container [jnlp] waiting [ContainerCreating] No message
+	Container [kaniko] waiting [ContainerCreating] No message
+	Pod [Pending][ContainersNotReady] containers with unready status: [kaniko git jnlp]
+Agent django-docker-build-4-ttds8-svchk-hjs3g is provisioned from template django-docker-build_4-ttds8-svchk
+---
+apiVersion: "v1"
+kind: "Pod"
+metadata:
+  annotations:
+    kubernetes.jenkins.io/last-refresh: "1783181290989"
+    buildUrl: "http://jenkins.jenkins.svc.cluster.local:80/job/django-docker-build/4/"
+    runUrl: "job/django-docker-build/4/"
+  labels:
+    app: "jenkins-kaniko"
+    jenkins/jenkins-jenkins-agent: "true"
+    jenkins/label-digest: "3af06c45b1d783c19298a9fb4a1f621bfd8605b3"
+    jenkins/label: "django-docker-build_4-ttds8"
+    kubernetes.jenkins.io/controller: "http___jenkins_jenkins_svc_cluster_local_80x"
+  name: "django-docker-build-4-ttds8-svchk-hjs3g"
+  namespace: "jenkins"
+spec:
+  containers:
+  - args:
+    - "99d"
+    command:
+    - "sleep"
+    image: "gcr.io/kaniko-project/executor:v1.23.2-debug"
+    imagePullPolicy: "Always"
+    name: "kaniko"
+    volumeMounts:
+    - mountPath: "/home/jenkins/agent"
+      name: "workspace-volume"
+      readOnly: false
+  - args:
+    - "99d"
+    command:
+    - "sleep"
+    image: "alpine/git:2.43.0"
+    name: "git"
+    volumeMounts:
+    - mountPath: "/home/jenkins/agent"
+      name: "workspace-volume"
+      readOnly: false
+  - env:
+    - name: "JENKINS_SECRET"
+      value: "********"
+    - name: "JENKINS_TUNNEL"
+      value: "jenkins-agent.jenkins.svc.cluster.local:50000"
+    - name: "JENKINS_AGENT_NAME"
+      value: "django-docker-build-4-ttds8-svchk-hjs3g"
+    - name: "REMOTING_OPTS"
+      value: "-noReconnectAfter 1d"
+    - name: "JENKINS_NAME"
+      value: "django-docker-build-4-ttds8-svchk-hjs3g"
+    - name: "JENKINS_AGENT_WORKDIR"
+      value: "/home/jenkins/agent"
+    - name: "JENKINS_URL"
+      value: "http://jenkins.jenkins.svc.cluster.local:80/"
+    image: "jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21"
+    name: "jnlp"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+    volumeMounts:
+    - mountPath: "/home/jenkins/agent"
+      name: "workspace-volume"
+      readOnly: false
+  nodeSelector:
+    kubernetes.io/os: "linux"
+  restartPolicy: "Never"
+  serviceAccountName: "jenkins-sa"
+  volumes:
+  - emptyDir:
+      medium: ""
+    name: "workspace-volume"
+
+Running on django-docker-build-4-ttds8-svchk-hjs3g in /home/jenkins/agent/workspace/django-docker-build
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+The recommended git tool is: NONE
+using credential github-token
+Cloning the remote Git repository
+Cloning repository https://github.com/InnaIvBoiko/my-microservice-project.git
+ > git init /home/jenkins/agent/workspace/django-docker-build # timeout=10
+Fetching upstream changes from https://github.com/InnaIvBoiko/my-microservice-project.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+using GIT_ASKPASS to set credentials GitHub Personal Access Token
+ > git fetch --tags --force --progress -- https://github.com/InnaIvBoiko/my-microservice-project.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git config remote.origin.url https://github.com/InnaIvBoiko/my-microservice-project.git # timeout=10
+ > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
+Avoid second fetch
+Checking out Revision ca56001339111af7f557cfa15f060dcbc84ea0e3 (refs/remotes/origin/final-project)
+Commit message: "Update EKS instance configuration: increase desired size to 5 and max size to 6"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Build & Push Docker Image)
+[Pipeline] container
+[Pipeline] {
+[Pipeline] sh
+ > git rev-parse refs/remotes/origin/final-project^{commit} # timeout=10
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f ca56001339111af7f557cfa15f060dcbc84ea0e3 # timeout=10
++ /kaniko/executor --context /home/jenkins/agent/workspace/django-docker-build/docker/django --dockerfile /home/jenkins/agent/workspace/django-docker-build/docker/django/Dockerfile --destination 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr:v1.0.4 --destination 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr:latest '--cache=true' --cache-repo 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr-cache
+[36mINFO[0m[0000] Retrieving image manifest python:3.10-slim   
+[36mINFO[0m[0000] Retrieving image python:3.10-slim from registry index.docker.io 
+[36mINFO[0m[0000] Retrieving image manifest python:3.10-slim   
+[36mINFO[0m[0000] Returning cached image manifest              
+[36mINFO[0m[0000] Built cross stage deps: map[]                
+[36mINFO[0m[0000] Retrieving image manifest python:3.10-slim   
+[36mINFO[0m[0000] Returning cached image manifest              
+[36mINFO[0m[0000] Retrieving image manifest python:3.10-slim   
+[36mINFO[0m[0000] Returning cached image manifest              
+[36mINFO[0m[0000] Executing 0 build triggers                   
+[36mINFO[0m[0000] Building stage 'python:3.10-slim' [idx: '0', base-idx: '-1'] 
+[36mINFO[0m[0000] Checking for cached layer 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr-cache:a25af0f6be1f1db55519e9ad6e5bcb0122fa50066e4a9ee347e64960f4059def... 
+[36mINFO[0m[0001] No cached layer found for cmd RUN pip install --no-cache-dir -r requirements.txt 
+[36mINFO[0m[0001] Unpacking rootfs as cmd COPY requirements.txt . requires it. 
+[36mINFO[0m[0003] ENV PYTHONDONTWRITEBYTECODE=1                
+[36mINFO[0m[0003] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0003] ENV PYTHONUNBUFFERED=1                       
+[36mINFO[0m[0003] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0003] WORKDIR /app                                 
+[36mINFO[0m[0003] Cmd: workdir                                 
+[36mINFO[0m[0003] Changed working directory to /app            
+[36mINFO[0m[0003] Creating directory /app with uid -1 and gid -1 
+[36mINFO[0m[0003] Taking snapshot of files...                  
+[36mINFO[0m[0003] COPY requirements.txt .                      
+[36mINFO[0m[0003] Taking snapshot of files...                  
+[36mINFO[0m[0003] RUN pip install --no-cache-dir -r requirements.txt 
+[36mINFO[0m[0003] Initializing snapshotter ...                 
+[36mINFO[0m[0003] Taking snapshot of full filesystem...        
+[36mINFO[0m[0004] Cmd: /bin/sh                                 
+[36mINFO[0m[0004] Args: [-c pip install --no-cache-dir -r requirements.txt] 
+[36mINFO[0m[0004] Running: [/bin/sh -c pip install --no-cache-dir -r requirements.txt] 
+Collecting Django==4.2
+  Downloading Django-4.2-py3-none-any.whl (8.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.0/8.0 MB 95.7 MB/s eta 0:00:00
+Collecting psycopg2-binary==2.9.7
+  Downloading psycopg2_binary-2.9.7-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.0/3.0 MB 289.6 MB/s eta 0:00:00
+Collecting asgiref<4,>=3.6.0
+  Downloading asgiref-3.11.1-py3-none-any.whl (24 kB)
+Collecting sqlparse>=0.3.1
+  Downloading sqlparse-0.5.5-py3-none-any.whl (46 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 46.1/46.1 kB 188.0 MB/s eta 0:00:00
+Collecting typing_extensions>=4
+  Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 45.6/45.6 kB 142.1 MB/s eta 0:00:00
+Installing collected packages: typing_extensions, sqlparse, psycopg2-binary, asgiref, Django
+Successfully installed Django-4.2 asgiref-3.11.1 psycopg2-binary-2.9.7 sqlparse-0.5.5 typing_extensions-4.16.0
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+
+[notice] A new release of pip is available: 23.0.1 -> 26.1.2
+[notice] To update, run: pip install --upgrade pip
+[36mINFO[0m[0009] Taking snapshot of full filesystem...        
+[36mINFO[0m[0012] Pushing layer 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr-cache:a25af0f6be1f1db55519e9ad6e5bcb0122fa50066e4a9ee347e64960f4059def to cache now 
+[36mINFO[0m[0013] COPY . .                                     
+[36mINFO[0m[0013] Taking snapshot of files...                  
+[36mINFO[0m[0013] ARG POSTGRES_HOST                            
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ARG POSTGRES_PORT                            
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ARG POSTGRES_DB                              
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ARG POSTGRES_USER                            
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ARG POSTGRES_PASSWORD                        
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ENV POSTGRES_HOST=${POSTGRES_HOST}           
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ENV POSTGRES_PORT=${POSTGRES_PORT}           
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ENV POSTGRES_DB=${POSTGRES_DB}               
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ENV POSTGRES_USER=${POSTGRES_USER}           
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD}   
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"] 
+[36mINFO[0m[0013] No files changed in this command, skipping snapshotting. 
+[36mINFO[0m[0013] Pushing image to 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr-cache:a25af0f6be1f1db55519e9ad6e5bcb0122fa50066e4a9ee347e64960f4059def 
+[33mWARN[0m[0013] Error uploading layer to cache: failed to push to destination 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr-cache:a25af0f6be1f1db55519e9ad6e5bcb0122fa50066e4a9ee347e64960f4059def: POST https://740948698725.dkr.ecr.us-west-2.amazonaws.com/v2/final-project-ecr-cache/blobs/uploads/: NAME_UNKNOWN: The repository with name 'final-project-ecr-cache' does not exist in the registry with id '740948698725' 
+[36mINFO[0m[0013] Pushing image to 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr:v1.0.4 
+[36mINFO[0m[0014] Pushed 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr@sha256:179c08d6e025c576552373aabf0cb48650fb228ba4478f557bb6c91d1f61520e 
+[36mINFO[0m[0014] Pushing image to 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr:latest 
+[36mINFO[0m[0014] Pushed 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr@sha256:179c08d6e025c576552373aabf0cb48650fb228ba4478f557bb6c91d1f61520e 
+[Pipeline] }
+[Pipeline] // container
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Update Helm Chart Tag)
+[Pipeline] container
+[Pipeline] {
+[Pipeline] withCredentials
+Masking supported pattern matches of $GIT_PAT
+[Pipeline] {
+[Pipeline] sh
++ git clone https://InnaIvBoiko:****@github.com/InnaIvBoiko/my-microservice-project.git repo
+Cloning into 'repo'...
++ cd repo
++ git checkout final-project
+branch 'final-project' set up to track 'origin/final-project'.
+Switched to a new branch 'final-project'
++ sed -i 's|^  tag:.*|  tag: v1.0.4|' charts/django-app/values.yaml
++ git config user.email jenkins@localhost
++ git config user.name jenkins
++ git add charts/django-app/values.yaml
++ git commit -m 'ci: update image tag to v1.0.4 [skip ci]'
+[final-project 638dfe9] ci: update image tag to v1.0.4 [skip ci]
+ 1 file changed, 1 insertion(+), 1 deletion(-)
++ git push origin final-project
+To https://github.com/InnaIvBoiko/my-microservice-project.git
+   ca56001..638dfe9  final-project -> final-project
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // container
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] echo
+Image 740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr:v1.0.4 pushed. ArgoCD will sync automatically.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] }
+[Pipeline] // podTemplate
+[Pipeline] End of Pipeline
+Finished: SUCCESS

@@ -1,0 +1,111 @@
+controller:
+  # Admin credentials are loaded from a Kubernetes Secret (never plain text here).
+  # The Secret "jenkins-admin-secret" is created by Terraform.
+  admin:
+    existingSecret: jenkins-admin-secret
+    userKey: jenkins-admin-user
+    passwordKey: jenkins-admin-password
+
+  serviceType: ClusterIP
+  servicePort: 80
+  service:
+    port: 80
+    targetPort: 8080
+
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+
+  # Let Jenkins install the latest compatible version of each plugin.
+  # Pinning to specific versions caused 404 errors when old versions are removed
+  # from the update center and incompatibility with the installed Jenkins LTS.
+  installLatestPlugins: true
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - configuration-as-code
+    - credentials-binding
+    - job-dsl
+    - github
+
+  # Inject GitHub credentials from the "jenkins-github-secret" Kubernetes Secret.
+  # JCasC references these as ${GITHUB_USERNAME} and ${GITHUB_PAT} below.
+  extraEnvVars:
+    - name: GITHUB_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-github-secret
+          key: username
+    - name: GITHUB_PAT
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-github-secret
+          key: token
+
+  # Use the IRSA-annotated service account created by Terraform
+  serviceAccount:
+    create: false
+    name: jenkins-sa
+
+  persistence:
+    enabled: true
+    storageClass: "ebs-sc"
+    size: 10Gi
+
+  JCasC:
+    configScripts:
+      # Credentials sourced from environment variables — no secrets in this file
+      credentials: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: github-token
+                      username: "${GITHUB_USERNAME}"
+                      password: "${GITHUB_PAT}"
+                      description: "GitHub Personal Access Token"
+
+      # Seed job that auto-creates the Django pipeline on first boot
+      seed-job: |
+        jobs:
+          - script: >
+              job('seed-job') {
+                description('Generates the Django CI pipeline from Git')
+                scm {
+                  git {
+                    remote {
+                      url('https://github.com/InnaIvBoiko/my-microservice-project.git')
+                      credentials('github-token')
+                    }
+                    branches('*/final-project')
+                  }
+                }
+                steps {
+                  dsl {
+                    text('''
+                      pipelineJob("django-docker-build") {
+                        definition {
+                          cpsScm {
+                            scm {
+                              git {
+                                remote {
+                                  url("https://github.com/InnaIvBoiko/my-microservice-project.git")
+                                  credentials("github-token")
+                                }
+                                branches("*/final-project")
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ''')
+                  }
+                }
+              }

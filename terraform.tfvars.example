@@ -1,0 +1,26 @@
+# Copy this file to terraform.tfvars and fill in your real values.
+# terraform.tfvars is gitignored — never commit real secrets.
+
+aws_region   = "us-west-2"
+project_name = "final-project"
+
+# Jenkins
+jenkins_admin_username = "admin"
+jenkins_admin_password = ""   # min 12 chars, e.g. "MyJenkins@2026!"
+
+# GitHub — used by Jenkins (CI credentials) and ArgoCD (repo access)
+github_username = "InnaIvBoiko"
+github_token    = ""          # GitHub PAT with scopes: repo, workflow
+
+# Monitoring
+grafana_admin_password = ""   # min 12 chars, e.g. "MyGrafana@2026!"
+
+# RDS
+db_password = ""              # RDS master password, min 8 chars
+
+# Django
+django_secret_key = ""        # Django SECRET_KEY for the django-app deployment
+
+# Domain — must be a Route53-hosted zone in your AWS account
+# ArgoCD will be at argocd.<domain_name>, Jenkins at jenkins.<domain_name>
+domain_name = ""              # e.g. "myproject.example.com"

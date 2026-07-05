@@ -25,12 +25,12 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-secret
+                  name: {{ .Values.secret.existingSecret | default (printf "%s-secret" .Release.Name) }}
                   key: POSTGRES_PASSWORD
             - name: DJANGO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-secret
+                  name: {{ .Values.secret.existingSecret | default (printf "%s-secret" .Release.Name) }}
                   key: DJANGO_SECRET_KEY
           resources:
             requests:

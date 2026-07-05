@@ -13,3 +13,5 @@ github_token    = "" # GitHub PAT with repo + workflow scopes
 grafana_admin_password = "" # min 12 chars
 
 db_password = "" # RDS master password
+
+django_secret_key = "" # Django SECRET_KEY for the django-app deployment

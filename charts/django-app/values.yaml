@@ -1,8 +1,3 @@
-# Override sensitive values at install time, e.g.:
-#   helm install django-app ./charts/django-app \
-#     --set image.repository=<your-ecr-url> \
-#     --set secret.postgresPassword=<your-password> \
-#     --set secret.djangoSecretKey=<your-secret-key>
 image:
   repository: "740948698725.dkr.ecr.us-west-2.amazonaws.com/final-project-ecr"
   tag: v1.0.5
@@ -22,8 +17,13 @@ autoscaler:
   targetCPUUtilizationPercentage: 70
 
 secret:
-  postgresPassword: "admin123AWS23"   # must match modules/rds password in main.tf
-  djangoSecretKey: "CHANGE-ME-django-insecure-key"  # any random string works for the demo
+  # Real credentials live in the "django-app-secret" Kubernetes Secret, created by
+  # Terraform (see kubernetes_secret_v1.django_app_secret in main.tf) — never in this
+  # git-committed file. Leave postgresPassword/djangoSecretKey empty below; they're
+  # only used as a local-dev fallback when existingSecret is unset.
+  existingSecret: "django-app-external-secret"
+  postgresPassword: ""
+  djangoSecretKey: ""
 
 config:
   DEBUG: "False"

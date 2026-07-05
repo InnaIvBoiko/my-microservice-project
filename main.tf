@@ -169,6 +169,24 @@ module "rds" {
   }
 }
 
+# Django app credentials — referenced by charts/django-app via secret.existingSecret
+# so real values never sit in the git-committed Helm values.yaml.
+resource "kubernetes_secret_v1" "django_app_secret" {
+  metadata {
+    name      = "django-app-external-secret"
+    namespace = "default"
+  }
+
+  data = {
+    POSTGRES_PASSWORD = var.db_password
+    DJANGO_SECRET_KEY = var.django_secret_key
+  }
+
+  type = "Opaque"
+
+  depends_on = [module.eks]
+}
+
 module "monitoring" {
   source = "./modules/monitoring"
 

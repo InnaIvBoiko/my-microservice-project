@@ -270,7 +270,8 @@ Open http://localhost:3000 and check the built-in "Kubernetes / Compute Resource
 - S3 state bucket: AES-256 encryption + public access blocked + lifecycle policy
 - ECR repository policy scoped to the current AWS account only
 - IAM roles for Kaniko and the EBS CSI driver use **IRSA** (IAM Roles for Service Accounts) — no static AWS credentials stored in the cluster
-- `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD` injected via Kubernetes Secret, not baked into the image
+- `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD` are created by Terraform as a `django-app-secret` Kubernetes Secret (`kubernetes_secret_v1.django_app_secret` in `main.tf`) and referenced by the chart via `secret.existingSecret` — `charts/django-app/values.yaml` never holds real credentials, even though it's committed to Git and deployed straight by ArgoCD
+- The RDS master password (`var.db_password`) is sourced from `terraform.tfvars` (gitignored), not hardcoded in `main.tf`
 - Jenkins admin password and the GitHub token are stored in Kubernetes Secrets — never in `values.yaml` or `Jenkinsfile`
 - `terraform.tfvars` is gitignored — never commit real secrets
 
